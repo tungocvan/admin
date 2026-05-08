@@ -1,0 +1,287 @@
+diff --git a/Modules/Website/Http/Controllers/ProductController.php b/Modules/Website/Http/Controllers/ProductController.php
+index 8b6409b..1932fc1 100644
+--- a/Modules/Website/Http/Controllers/ProductController.php
++++ b/Modules/Website/Http/Controllers/ProductController.php
+@@ -3,6 +3,7 @@
+ namespace Modules\Website\Http\Controllers;
+ use App\Http\Controllers\Controller;
+ use Illuminate\Http\Request;
++use App\Models\WpProduct;
+ 
+ class ProductController extends Controller
+ {
+@@ -18,45 +19,26 @@ public function __construct()
+     }
+     public function index()
+     {
++        //dd(1);
++        //return view('Website::hamada');
+         return view('Website::products.index');
+     }
+-
+     public function show(string $slug)
+     {
+-        return view('Website::products.show', compact('slug'));
+-    }
+-
+-    /**
+-     * Show the form for creating a new resource.
+-     */
+-    public function create()
+-    {
+-        //
++        
++        // Kiểm tra sản phẩm tồn tại
++        //$product = WpProduct::where('slug', $slug)->firstOrFail();        
++        $product = WpProduct::where('slug', $slug)->firstOrFail();
++
++        return view('Website::products.show', [
++            'product' => $product,
++            'slug' => $slug
++        ]);
+     }
+-
+-
+-
+-    /**
+-     * Show the form for editing the specified resource.
+-     */
+-    public function edit(string $id)
+-    {
+-        //
+-    }
+-
+-    /**
+-     * Update the specified resource in storage.
+-     */
+-    public function update(Request $request, string $id)
+-    {
+-        //
+-    }
+-
+-    /**
+-     * Remove the specified resource from storage.
+-     */
+-    public function destroy(string $id)
++    
++    public function productDetail($id)
+     {
+-        //
++        dd('productDetail:' . $id);
++        //return view('Website::hamada');
+     }
+ }
+diff --git a/Modules/Website/Livewire/Checkout/CheckoutPage.php b/Modules/Website/Livewire/Checkout/CheckoutPage.php
+index ce43189..331dd3c 100644
+--- a/Modules/Website/Livewire/Checkout/CheckoutPage.php
++++ b/Modules/Website/Livewire/Checkout/CheckoutPage.php
+@@ -38,6 +38,7 @@ public function getTotalProperty()
+ 
+     public function placeOrder()
+     {
++        dd(1);
+         $this->validate();
+ 
+         $order = Order::create([
+@@ -65,6 +66,7 @@ public function placeOrder()
+ 
+     public function render()
+     {
++
+         return view('Website::livewire.checkout.checkout-page')
+             ->layout('Website::layouts.website');
+     }
+diff --git a/Modules/Website/resources/views/layouts/website.blade.php b/Modules/Website/resources/views/layouts/website.blade.php
+index a9847e4..4962977 100644
+--- a/Modules/Website/resources/views/layouts/website.blade.php
++++ b/Modules/Website/resources/views/layouts/website.blade.php
+@@ -55,8 +55,8 @@
+ 
+     <main class="main-content py-4">
+         <div class="container">
+-            {{ $slot ?? '' }}
+-            @yield('content')
++            {{ $slot ?? "@yield('content')" }}
++
+         </div>
+     </main>
+ 
+diff --git a/Modules/Website/resources/views/livewire/checkout/checkout-page.blade.php b/Modules/Website/resources/views/livewire/checkout/checkout-page.blade.php
+index 999b984..5649740 100644
+--- a/Modules/Website/resources/views/livewire/checkout/checkout-page.blade.php
++++ b/Modules/Website/resources/views/livewire/checkout/checkout-page.blade.php
+@@ -14,7 +14,7 @@
+             {{-- FORM --}}
+             <div class="col-md-7">
+                 <div class="card mb-4">
+-                    <form wire:submit.prevent="placeOrder">
++
+ 
+                         <div class="form-group">
+                             <label>Full name</label>
+diff --git a/Modules/Website/resources/views/products/index.blade.php b/Modules/Website/resources/views/products/index.blade.php
+index 0098e87..24cc707 100644
+--- a/Modules/Website/resources/views/products/index.blade.php
++++ b/Modules/Website/resources/views/products/index.blade.php
+@@ -1,8 +1,31 @@
+ @extends('Website::layouts.website')
++@section('plugins.Toastr', true)
++@section('title', 'PRODUCT LIST PAGE')
+ 
+-@section('content')
+-<h3 class="mb-4">Danh sách sản phẩm</h3>
+-<hr>
+-@livewire('website.products.product-list')
++@section('content_header')
+ 
++@stop
++
++@section('header')
++    @include('Website::partials.header')
++@endsection
++   
++
++@section('content')    
++    <div class="container">                                        
++        @livewire('website.products.product-list')
++    </div>
++@stop
++
++@section('footer')
++@include('Website::partials.footer')
+ @endsection
++
++@section('css')
++
++@stop
++
++@section('js')
++        
++@stop
++ 
+\ No newline at end of file
+diff --git a/Modules/Website/resources/views/products/show.blade.php b/Modules/Website/resources/views/products/show.blade.php
+index cb1157c..8d1dd8d 100644
+--- a/Modules/Website/resources/views/products/show.blade.php
++++ b/Modules/Website/resources/views/products/show.blade.php
+@@ -1,7 +1,49 @@
+-@extends('Website::layouts.website')
++@extends('Website::layouts.hamada')
++@section('plugins.Toastr', true)
++@section('plugins.Summernote', true)
++{{-- @section('plugins.Select2', true) --}}
++@section('title', $product->title)
++@section('meta_description', Str::limit($product->short_description, 160))
++
++@push('styles')
++<style>
++    .img-thumbnail.border-success {
++        border-color: #28a745 !important;
++        border-width: 3px !important;
++    }
++</style>
++@endpush
++
++@section('header')
++    @include('Website::partials.header')
++@endsection
++   
+ 
+ @section('content')
+-<div class="container py-4">
+-    @livewire('website.products.product-detail', ['slug' => $slug])
+-</div>
++    
++    <div class="container">                                 
++        @livewire('website.products.product-detail', ['slug' => $slug])
++    </div>
++@stop
++
++@section('footer')
++@include('Website::partials.footer')
+ @endsection
++
++@section('css')
++    {{-- Add here extra stylesheets --}}
++    {{-- <link rel="stylesheet" href="/css/admin_custom.css"> --}}
++    
++
++    </style>
++
++@stop
++
++@section('js')
++     {{-- https://www.daterangepicker.com/#examples  --}}
++    {{-- <script> console.log("Hi, I'm using the Laravel-AdminLTE package!"); </script> --}}
++
++    
++    
++@stop
++ 
+\ No newline at end of file
+diff --git a/Modules/Website/routes/web.php b/Modules/Website/routes/web.php
+index f954a59..f39a25d 100644
+--- a/Modules/Website/routes/web.php
++++ b/Modules/Website/routes/web.php
+@@ -3,26 +3,48 @@
+ use Illuminate\Support\Facades\Route;
+ use Modules\Website\Http\Controllers\WebsiteController;
+ use Modules\Website\Http\Controllers\ProductController;
++use Modules\Website\Http\Controllers\CartController;
++use Modules\Website\Http\Controllers\CheckoutController;
+ use Modules\Website\Livewire\Home;
+-use Modules\Website\Livewire\Cart\CartPage;
+-use Modules\Website\Livewire\Checkout\CheckoutPage;
+-use Modules\Website\Livewire\Checkout\CheckoutSuccess;
++// use Modules\Website\Livewire\Cart\CartPage;
++// use Modules\Website\Livewire\Checkout\CheckoutPage;
++// use Modules\Website\Livewire\Checkout\CheckoutSuccess;
+ 
+ Route::middleware(['web'])->prefix('/website')->name('website.')->group(function(){
+     Route::get('/', [WebsiteController::class,'index'])->name('index');
+     Route::get('home', Home::class)->name('home');
+ 
+-    Route::get('products', [ProductController::class, 'index'])
+-    ->name('products.index');
++    Route::controller(ProductController::class)
++            ->prefix('products')
++            ->name('products.')
++            ->group(function () {
++                // GET /website/products - Danh sách sản phẩm
++                Route::get('/', 'index')->name('index');
+ 
+-    Route::get('products/{slug}', [ProductController::class, 'show'])
+-        ->name('products.show');
++                // GET /website/products/{slug} - Chi tiết sản phẩm
++                Route::get('/{slug}', 'show')->name('show');
++    });
+ 
+-    Route::get('cart', CartPage::class)
+-        ->name('cart');
+-    Route::get('checkout', CheckoutPage::class)
+-        ->name('checkout');
+-    Route::get('checkout/success/{code}', CheckoutSuccess::class)
+-        ->name('checkout.success');
++    Route::controller(CartController::class)
++            ->prefix('cart')
++            ->name('cart.')
++            ->group(function () {
++                // GET /website/cart - Trang giỏ hàng
++                Route::get('/', 'index')->name('index');
++    });
++
++    Route::controller(CheckoutController::class)
++            ->prefix('checkout')
++            ->name('checkout.')
++            ->group(function () {
++                // GET /website/checkout - Trang thanh toán
++                Route::get('/', 'index')->name('index');
++
++                // POST /website/checkout - Xử lý thanh toán
++                Route::post('/', 'process')->name('process');
++    });
++
++    Route::get('/order-success/{code}', [CheckoutController::class, 'success'])
++    ->name('order.success');
+ });
+ 

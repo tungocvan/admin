@@ -1,0 +1,887 @@
+diff --git a/Modules/Admin/Livewire/Header/GeneralSettings.php b/Modules/Admin/Livewire/Header/GeneralSettings.php
+index b559a71..9f052e5 100644
+--- a/Modules/Admin/Livewire/Header/GeneralSettings.php
++++ b/Modules/Admin/Livewire/Header/GeneralSettings.php
+@@ -26,10 +26,10 @@ class GeneralSettings extends Component
+ 
+     public function mount(SettingsService $settingsService)
+     {
+-        $this->hotline = $settingsService->get('header.topbar.hotline');
+-        $this->email = $settingsService->get('header.topbar.email');
++        $this->hotline = $settingsService->get('header.topbar.hotline','0903971949');
++        $this->email = $settingsService->get('header.topbar.email','tungocvan@gmail.com');
+         $this->help_url = $settingsService->get('header.topbar.help_url');
+-        $this->order_tracking_url = $settingsService->get('header.topbar.order_tracking_url');
++        $this->order_tracking_url = $settingsService->get('header.topbar.order_tracking_url','/account/orders');
+         $this->brand_name = $settingsService->get('header.brand_name', 'FlexBiz');
+     }
+ 
+diff --git a/Modules/Admin/resources/views/livewire/header/menu-manager.blade.php b/Modules/Admin/resources/views/livewire/header/menu-manager.blade.php
+deleted file mode 100644
+index d235b07..0000000
+--- a/Modules/Admin/resources/views/livewire/header/menu-manager.blade.php
++++ /dev/null
+@@ -1,171 +0,0 @@
+-<div class="space-y-6" x-data="{ open: @entangle('isModalOpen') }">
+-    {{-- 1. Location Selector --}}
+-    <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+-        <div class="flex items-center gap-4">
+-            <label class="font-bold text-gray-700">Vị trí Menu:</label>
+-            <select wire:model.live="location" class="rounded-md border-gray-300 text-sm focus:ring-blue-500">
+-                @foreach($menuLocations as $key => $name)
+-                    <option value="{{ $key }}">{{ $name }}</option>
+-                @endforeach
+-            </select>
+-        </div>
+-        {{-- Button kích hoạt Modal --}}
+-        <button wire:click="openModal"
+-                class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm font-bold hover:bg-blue-700 shadow-sm transition">
+-            + Thêm mục mới
+-        </button>
+-    </div>
+-
+-    {{-- 2. Menu Tree List --}}
+-    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+-        @if($menuTree->isEmpty())
+-            <div class="p-8 text-center text-gray-500">
+-                Chưa có menu nào cho vị trí này. Hãy thêm mới!
+-            </div>
+-        @else
+-            <ul class="divide-y divide-gray-100">
+-                @foreach($menuTree as $item)
+-                    <li class="p-4 hover:bg-gray-50 transition group">
+-                        <div class="flex justify-between items-center">
+-                            <div class="flex items-center gap-3">
+-                                <span class="cursor-move text-gray-400">⋮⋮</span>
+-                                <span class="font-bold text-gray-800">{{ $item->title }}</span>
+-                                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ $item->url }}</span>
+-                                @if(!$item->is_active)
+-                                    <span class="text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded">Hidden</span>
+-                                @endif
+-                            </div>
+-                            <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
+-                                <button wire:click="openModal({{ $item->id }})" class="text-blue-600 hover:underline text-xs font-medium">Sửa</button>
+-                                <button wire:confirm="Xóa mục này và toàn bộ con?" wire:click="delete({{ $item->id }})" class="text-red-600 hover:underline text-xs font-medium">Xóa</button>
+-                            </div>
+-                        </div>
+-
+-                        {{-- Children Recursive --}}
+-                        @if($item->children->count() > 0)
+-                            <ul class="mt-3 ml-8 border-l-2 border-gray-100 pl-4 space-y-2">
+-                                @foreach($item->children as $child)
+-                                    <li class="flex justify-between items-center text-sm">
+-                                        <div class="flex items-center gap-2">
+-                                            <span class="text-gray-400">-</span>
+-                                            <span>{{ $child->title }}</span>
+-                                        </div>
+-                                        <div class="flex items-center gap-2">
+-                                            <button wire:click="openModal({{ $child->id }})" class="text-blue-600 hover:underline text-xs">Sửa</button>
+-                                            <button wire:confirm="Xóa?" wire:click="delete({{ $child->id }})" class="text-red-600 hover:underline text-xs">Xóa</button>
+-                                        </div>
+-                                    </li>
+-                                @endforeach
+-                            </ul>
+-                        @endif
+-                    </li>
+-                @endforeach
+-            </ul>
+-        @endif
+-    </div>
+-
+-    {{-- 3. MODAL (Render luôn HTML nhưng ẩn bằng Alpine x-show) --}}
+-    @teleport('body')
+-        <div x-show="open"
+-             style="display: none;"
+-             class="fixed inset-0 z-[9999] overflow-y-auto"
+-             aria-labelledby="modal-title"
+-             role="dialog"
+-             aria-modal="true">
+-
+-            {{-- Backdrop (Nền tối) --}}
+-            <div x-show="open"
+-                 x-transition:enter="ease-out duration-300"
+-                 x-transition:enter-start="opacity-0"
+-                 x-transition:enter-end="opacity-100"
+-                 x-transition:leave="ease-in duration-200"
+-                 x-transition:leave-start="opacity-100"
+-                 x-transition:leave-end="opacity-0"
+-                 class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity"
+-                 aria-hidden="true"
+-                 @click="open = false"> {{-- Click ra ngoài để đóng --}}
+-            </div>
+-
+-            {{-- Căn giữa modal --}}
+-            <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+-
+-                {{-- Modal Panel --}}
+-                <div x-show="open"
+-                     x-transition:enter="ease-out duration-300"
+-                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+-                     x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+-                     x-transition:leave="ease-in duration-200"
+-                     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+-                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+-                     class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+-
+-                    <form wire:submit.prevent="save" class="p-6">
+-                        <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-2">
+-                            <h3 class="text-lg font-bold text-gray-900">
+-                                {{ $editingId ? 'Cập nhật Menu' : 'Thêm Menu Mới' }}
+-                            </h3>
+-                            <button type="button" @click="open = false" class="text-gray-400 hover:text-gray-600">
+-                                <span class="text-2xl">&times;</span>
+-                            </button>
+-                        </div>
+-
+-                        <div class="space-y-4">
+-                            {{-- Loading State --}}
+-                            <div wire:loading wire:target="openModal" class="text-xs text-blue-500 font-medium">
+-                                Đang tải dữ liệu...
+-                            </div>
+-
+-                            {{-- Tiêu đề --}}
+-                            <div>
+-                                <label class="block text-sm font-medium text-gray-700">Tiêu đề <span class="text-red-500">*</span></label>
+-                                <input type="text" wire:model="title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm" placeholder="Nhập tên menu...">
+-                                @error('title') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+-                            </div>
+-
+-                            {{-- URL --}}
+-                            <div>
+-                                <label class="block text-sm font-medium text-gray-700">Đường dẫn (URL)</label>
+-                                <input type="text" wire:model="url" placeholder="/gioi-thieu" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+-                            </div>
+-
+-                            {{-- Parent Select --}}
+-                            <div>
+-                                <label class="block text-sm font-medium text-gray-700">Menu Cha</label>
+-                                <select wire:model="parent_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+-                                    <option value="">-- Là mục gốc --</option>
+-                                    @foreach($flatItems as $pItem)
+-                                        @if($pItem->id != $editingId)
+-                                            <option value="{{ $pItem->id }}">{{ $pItem->title }}</option>
+-                                        @endif
+-                                    @endforeach
+-                                </select>
+-                            </div>
+-
+-                            {{-- Sort & Active --}}
+-                            <div class="flex gap-4">
+-                                <div class="w-1/2">
+-                                    <label class="block text-sm font-medium text-gray-700">Thứ tự</label>
+-                                    <input type="number" wire:model="sort_order" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 text-sm">
+-                                </div>
+-                                <div class="w-1/2 flex items-center pt-6">
+-                                    <label class="flex items-center cursor-pointer select-none">
+-                                        <input type="checkbox" wire:model="is_active" class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500">
+-                                        <span class="ml-2 text-sm text-gray-700 font-medium">Hiển thị</span>
+-                                    </label>
+-                                </div>
+-                            </div>
+-                        </div>
+-
+-                        <div class="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100">
+-                            <button type="button" @click="open = false" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium transition">Hủy</button>
+-                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium shadow-sm transition flex items-center gap-2">
+-                                <span wire:loading.remove wire:target="save">Lưu lại</span>
+-                                <span wire:loading wire:target="save">Đang lưu...</span>
+-                            </button>
+-                        </div>
+-                    </form>
+-                </div>
+-            </div>
+-        </div>
+-    @endteleport
+-</div>
+diff --git a/Modules/Admin/resources/views/pages/header/index.blade.php b/Modules/Admin/resources/views/pages/header/index.blade.php
+index e0b0358..f2263e1 100644
+--- a/Modules/Admin/resources/views/pages/header/index.blade.php
++++ b/Modules/Admin/resources/views/pages/header/index.blade.php
+@@ -1,49 +1,23 @@
+ @extends('Admin::layouts.master')
+ 
+-@section('title', 'Quản lý Header & Menu')
++@section('title', 'Cấu hình Hệ thống Header')
+ 
+ @section('content')
+-    <div class="max-w-7xl mx-auto py-6" x-data="{ activeTab: 'general' }">
+-
+-        <div class="flex justify-between items-center mb-6">
+-            <h1 class="text-2xl font-bold text-gray-900">Homepage Header Manager</h1>
+-        </div>
+-
+-        {{-- Tabs Navigation --}}
+-        <div class="border-b border-gray-200 mb-6">
+-            <nav class="-mb-px flex space-x-8">
+-                <button @click="activeTab = 'general'"
+-                    :class="activeTab === 'general' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+-                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+-                    Cấu hình chung
+-                </button>
+-                <button @click="activeTab = 'menu'"
+-                    :class="activeTab === 'menu' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+-                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+-                    Quản lý Menu
+-                </button>
+-            </nav>
+-        </div>
+-
+-        {{-- Tab Contents --}}
+-        <div x-show="activeTab === 'general'" style="display: none;">
+-            @livewire('admin.header.general-settings')
+-        </div>
+-
+-        <div x-show="activeTab === 'menu'" style="display: none;">
+-            @livewire('admin.header.menu-manager')
+-        </div>
+-
+-    </div>
++    {{--
++        Triết lý mới:
++        1. Chỉ sử dụng DUY NHẤT một Component Hub để quản lý dữ liệu đồng nhất.
++        2. Tận dụng logic Tab đã được tích hợp sẵn bên trong HeaderSettingsHub.
++    --}}
++    @livewire('admin.header.header-settings-hub')
+ @endsection
++
+ @section('js')
+ <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+ 
+ <script>
+     document.addEventListener('livewire:init', () => {
+-        // Hứng sự kiện 'show-toast' từ Livewire
++        // Xử lý thông báo Toast tập trung
+         Livewire.on('show-toast', (event) => {
+-            // Livewire 3 trả về mảng params, lấy phần tử đầu tiên
+             const data = event[0];
+ 
+             Swal.fire({
+@@ -53,7 +27,9 @@ class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-col
+                 title: data.message,
+                 showConfirmButton: false,
+                 timer: 3000,
+-                timerProgressBar: true
++                timerProgressBar: true,
++                background: '#ffffff',
++                iconColor: data.type === 'success' ? '#10B981' : '#EF4444',
+             });
+         });
+     });
+diff --git a/Modules/Website/Providers/WebsiteServiceProvider.php b/Modules/Website/Providers/WebsiteServiceProvider.php
+index dd02ae4..6e820f5 100644
+--- a/Modules/Website/Providers/WebsiteServiceProvider.php
++++ b/Modules/Website/Providers/WebsiteServiceProvider.php
+@@ -1,6 +1,7 @@
+ <?php
+ 
+ namespace Modules\Website\Providers;
++
+ use Illuminate\Support\ServiceProvider;
+ use Illuminate\Support\Facades\View;
+ use Modules\Website\Services\SettingsService;
+@@ -10,53 +11,34 @@
+ class WebsiteServiceProvider extends ServiceProvider
+ {
+     public function boot(): void
+-{
+-    // ... các config khác ...
+-
+-    // 1. Inject dữ liệu cho HEADER
+-    View::composer(['Website::partials.header', 'Website::layouts.master'], function ($view) {
+-        $settings = app(SettingsService::class);
+-        $menuService = app(HeaderMenuService::class);
+-
+-        $view->with([
+-            // Lấy menu Desktop và Mobile
+-            'mainMenu' => $menuService->getMenuTreeByLocation('primary'),
+-            'mobileMenu' => $menuService->getMenuTreeByLocation('mobile'),
+-
+-            // Lấy settings chung (Logo, Hotline...)
+-            'headerSettings' => [
+-                'hotline' => $settings->get('header.topbar.hotline', '0903 971 949'),
+-                'email' => $settings->get('header.topbar.email', 'contact@flexbiz.com'),
+-                'brand_name' => $settings->get('header.brand_name', 'FlexBiz'),
+-                'help_url' => $settings->get('header.topbar.help_url', '#'),
+-                'order_tracking_url' => $settings->get('header.topbar.order_tracking_url', '#'),
+-            ]
+-        ]);
+-    });
+-
+-    // 2. Inject dữ liệu cho FOOTER
+-    View::composer(['Website::partials.footer'], function ($view) {
+-        $footerService = app(FooterService::class);
+-        $settings = app(SettingsService::class);
+-
+-        $view->with([
+-            // Lấy cột footer active
+-            'footerColumns' => $footerService->getColumnsForFrontend(),
+-
+-            // Lấy social links active
+-            'socialLinks' => $footerService->getSocialLinks(),
+-
+-            // Lấy settings footer
+-            'footerSettings' => [
+-                'description' => $settings->get('footer.brand_description'),
+-                'address' => $settings->get('footer.address'),
+-                'email' => $settings->get('footer.email'),
+-                'phone' => $settings->get('footer.phone'),
+-                'copyright' => $settings->get('footer.copyright'),
+-                'appstore' => $settings->get('footer.appstore_url'),
+-                'playstore' => $settings->get('footer.playstore_url'),
+-            ]
+-        ]);
+-    });
+-}
++    {
++        // 1. Inject dữ liệu cho HEADER
++        View::composer(['Website::partials.header', 'Website::layouts.master'], function ($view) {
++            $settings = app(SettingsService::class);
++            $menuService = app(HeaderMenuService::class);
++
++            // FIX: Đổi getMenuTreeByLocation thành getMenuTree
++            $view->with([
++                'mainMenu' => $menuService->getMenuTree('primary'),
++                'mobileMenu' => $menuService->getMenuTree('mobile'),
++
++                // TỐI ƯU: Sử dụng getGroup để lấy toàn bộ cài đặt header một lần
++                'headerSettings' => $settings->getGroup('header')
++            ]);
++        });
++
++        // 2. Inject dữ liệu cho FOOTER
++        View::composer(['Website::partials.footer'], function ($view) {
++            $footerService = app(FooterService::class);
++            $settings = app(SettingsService::class);
++
++            $view->with([
++                'footerColumns' => $footerService->getColumnsForFrontend(),
++                'socialLinks' => $footerService->getSocialLinks(),
++
++                // TỐI ƯU: Sử dụng getGroup cho footer
++                'footerSettings' => $settings->getGroup('footer')
++            ]);
++        });
++    }
+ }
+diff --git a/Modules/Website/Services/HeaderMenuService.php b/Modules/Website/Services/HeaderMenuService.php
+index 7503a90..f9376fd 100644
+--- a/Modules/Website/Services/HeaderMenuService.php
++++ b/Modules/Website/Services/HeaderMenuService.php
+@@ -6,22 +6,45 @@
+ use Modules\Website\Models\HeaderMenuItem;
+ use Illuminate\Database\Eloquent\Collection;
+ use Illuminate\Support\Facades\Cache;
+-use Illuminate\Support\Facades\DB;
+ 
+ class HeaderMenuService
+ {
+     /**
+-     * Lấy cấu trúc menu theo vị trí để hiển thị Frontend
+-     * Có Cache, Eager Load con cháu
++     * Danh sách các vị trí menu được phép
++     * Thay vì hard-code trong Livewire, ta quản lý tại Service
+      */
+-    public function getMenuTreeByLocation(string $location): Collection
++    public function getAvailableLocations(): array
+     {
+-        return Cache::remember("menu_tree_{$location}", 3600, function () use ($location) {
+-            $menu = HeaderMenu::where('location', $location)->where('is_active', true)->first();
++        return [
++            'primary' => 'Desktop Main Menu',
++            'mobile'  => 'Mobile Slide-over',
++            'footer'  => 'Footer Links'
++        ];
++    }
+ 
++    /**
++     * Lấy hoặc tạo mới một Menu dựa trên Location
++     */
++    public function findOrCreateMenu(string $location): HeaderMenu
++    {
++        $locations = $this->getAvailableLocations();
++        $name = $locations[$location] ?? 'Unknown Menu';
++
++        return HeaderMenu::firstOrCreate(
++            ['location' => $location],
++            ['name' => $name, 'is_active' => true]
++        );
++    }
++
++    /**
++     * Lấy cấu trúc cây Menu theo vị trí
++     */
++    public function getMenuTree(string $location): Collection
++    {
++        return Cache::remember("menu_tree_{$location}", 3600, function () use ($location) {
++            $menu = HeaderMenu::where('location', $location)->first();
+             if (!$menu) return new Collection();
+ 
+-            // Lấy root items và load đệ quy children
+             return $menu->rootItems()
+                 ->where('is_active', true)
+                 ->with(['children' => function ($query) {
+@@ -33,60 +56,47 @@ public function getMenuTreeByLocation(string $location): Collection
+     }
+ 
+     /**
+-     * Tạo mới Menu Item
++     * Lấy danh sách item phẳng làm Menu cha (Root only)
+      */
+-    public function createItem(array $data): HeaderMenuItem
++    public function getPotentailParents(int $menuId, ?int $excludeId = null): Collection
+     {
+-        $item = HeaderMenuItem::create($data);
+-        $this->clearMenuCache($item->header_menu_id);
+-        return $item;
++        $query = HeaderMenuItem::where('header_menu_id', $menuId)
++            ->whereNull('parent_id');
++
++        if ($excludeId) {
++            $query->where('id', '!=', $excludeId);
++        }
++
++        return $query->get();
+     }
+ 
+     /**
+-     * Cập nhật Menu Item
++     * Xử lý lưu Item (Tạo mới hoặc Cập nhật)
+      */
+-    public function updateItem(int $id, array $data): bool
++    public function saveItem(array $data, ?int $id = null): HeaderMenuItem
+     {
+-        $item = HeaderMenuItem::findOrFail($id);
+-        $updated = $item->update($data);
+-
+-        if ($updated) {
+-            $this->clearMenuCache($item->header_menu_id);
++        if ($id) {
++            $item = HeaderMenuItem::findOrFail($id);
++            $item->update($data);
++        } else {
++            $item = HeaderMenuItem::create($data);
+         }
+-        return $updated;
++
++        $this->clearMenuCache($item->header_menu_id);
++        return $item;
+     }
+ 
+-    /**
+-     * Xóa Menu Item (và con của nó - nhờ cascade delete DB)
+-     */
+     public function deleteItem(int $id): bool
+     {
+         $item = HeaderMenuItem::findOrFail($id);
+         $menuId = $item->header_menu_id;
+-
+         $item->delete();
+-        $this->clearMenuCache($menuId);
+ 
++        $this->clearMenuCache($menuId);
+         return true;
+     }
+ 
+-    /**
+-     * Sắp xếp lại thứ tự (Sort Order)
+-     * Input: [{id: 1, sort_order: 0}, {id: 5, sort_order: 1}]
+-     */
+-    public function reorderItems(array $items): void
+-    {
+-        DB::transaction(function () use ($items) {
+-            foreach ($items as $item) {
+-                HeaderMenuItem::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
+-            }
+-        });
+-
+-        // Xóa cache toàn bộ menu để an toàn
+-        Cache::flush();
+-    }
+-
+-    protected function clearMenuCache($menuId)
++    private function clearMenuCache(int $menuId): void
+     {
+         $menu = HeaderMenu::find($menuId);
+         if ($menu) {
+diff --git a/Modules/Website/Services/SettingsService.php b/Modules/Website/Services/SettingsService.php
+index b19b80e..c775d85 100644
+--- a/Modules/Website/Services/SettingsService.php
++++ b/Modules/Website/Services/SettingsService.php
+@@ -75,4 +75,38 @@ public function updateMany(array $data, string $group = 'general'): bool
+             return false;
+         }
+     }
++    /**
++     * Lấy tất cả settings thuộc một group (vớ dụ: 'header')
++     * Giảm số lượng truy vấn DB và tận dụng Cache một lần
++     */
++    public function getGroup(string $group): array
++    {
++        return Cache::rememberForever("settings_group_{$group}", function () use ($group) {
++            return Setting::where('group_name', $group)
++                ->pluck('value', 'key')
++                ->toArray();
++        });
++    }
++
++    /**
++     * Cập nhật hàng loạt settings và xóa cache theo group
++     */
++    public function updateGroup(string $group, array $data): void
++    {
++        foreach ($data as $key => $value) {
++            Setting::updateOrCreate(
++                ['key' => $key],
++                [
++                    'value' => is_array($value) ? json_encode($value) : $value,
++                    'group_name' => $group
++                ]
++            );
++
++            // Xóa cache lẻ nếu Model vẫn dùng cache lẻ
++            Cache::forget("setting_{$key}");
++        }
++
++        // Xóa cache của cả group
++        Cache::forget("settings_group_{$group}");
++    }
+ }
+diff --git a/Modules/Website/resources/views/partials/header.blade.php b/Modules/Website/resources/views/partials/header.blade.php
+index fc0b8aa..2823c94 100644
+--- a/Modules/Website/resources/views/partials/header.blade.php
++++ b/Modules/Website/resources/views/partials/header.blade.php
+@@ -1,283 +1,60 @@
+-{{--
+-    HEADER COMPONENT
+-    Data Injected by: Modules/Website/Providers/WebsiteServiceProvider.php (View::composer)
+-    Variables: $headerSettings, $mainMenu, $mobileMenu
+---}}
+-
+-{{-- 1. TOP BAR (Desktop Only) --}}
+-<div class="bg-gray-900 text-white text-xs py-2 hidden md:block">
+-    <div class="container mx-auto px-4 flex justify-between items-center">
+-        <div class="flex items-center gap-4">
+-            {{-- Hotline --}}
+-            <span class="flex items-center gap-1">
+-                <svg class="w-3 h-3 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+-                {{ $headerSettings['hotline'] ?? '1900 xxxx' }}
+-            </span>
+-            <span class="text-gray-600">|</span>
+-            {{-- Email --}}
+-            <span class="flex items-center gap-1">
+-                <svg class="w-3 h-3 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+-                {{ $headerSettings['email'] ?? 'contact@domain.com' }}
++@php
++    // Inject Service để lấy thông tin cấu hình Admin
++    $settingsService = app(\Modules\Website\Services\SettingsService::class);
++    // Lấy group 'header' để hiển thị Tên thương hiệu/Logo trong Admin Panel
++    $headerSettings = $settingsService->getGroup('header');
++@endphp
++
++<header class="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-white px-4 shadow-sm sm:px-6 lg:px-8 transition-all duration-300">
++
++    <div class="flex items-center gap-x-4 lg:gap-x-6">
++        {{-- Nút Toggle Sidebar (Giữ nguyên logic AlpineJS của bạn) --}}
++        <button type="button" @click="sidebarOpen = !sidebarOpen" class="-m-2.5 p-2.5 text-gray-700 hover:text-indigo-600 transition-colors">
++            <span class="sr-only">Open sidebar</span>
++            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
++                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
++            </svg>
++        </button>
++
++        <div class="h-6 w-px bg-gray-200 lg:hidden" aria-hidden="true"></div>
++
++        {{-- Hiển thị Tên thương hiệu động từ Database --}}
++        <div class="flex items-center">
++            <span class="text-lg font-bold text-indigo-600 tracking-tight">
++                {{ $headerSettings['header.brand_name'] ?? 'FlexBiz Admin' }}
+             </span>
+         </div>
+-        <div class="flex items-center gap-4">
+-            <a href="{{ $headerSettings['help_url'] ?? '#' }}" class="hover:text-yellow-400 transition">Trợ giúp</a>
+-            <a href="{{ $headerSettings['order_tracking_url'] ?? '#' }}" class="hover:text-yellow-400 transition">Theo dõi đơn hàng</a>
+-        </div>
+     </div>
+-</div>
+-
+-{{-- 2. MAIN HEADER --}}
+-<header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm transition-all duration-300"
+-    x-data="{
+-        userDropdownOpen: false,
+-        scrolled: false,
+-        mobileMenuOpen: false,
+-        mobileSearchOpen: false
+-    }"
+-    @scroll.window="scrolled = (window.pageYOffset > 20)">
+-
+-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+-        <div class="flex justify-between items-center h-16 md:h-20 gap-4">
+-
+-            {{-- LEFT SECTION: LOGO & HAMBURGER --}}
+-            <div class="flex items-center gap-3 md:gap-8">
+-                {{-- Hamburger Button (Mobile) --}}
+-                <button @click="mobileMenuOpen = true" class="lg:hidden p-2 -ml-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition">
+-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+-                </button>
+-
+-                {{-- LOGO (Dynamic Brand Name) --}}
+-                <a href="/" class="flex-shrink-0 flex items-center gap-2 group">
+-                    {{-- Logo Icon Placeholder --}}
+-                    <div class="w-8 h-8 md:w-10 md:h-10 bg-black text-white rounded-lg flex items-center justify-center font-black text-lg md:text-xl group-hover:bg-blue-600 transition-colors">
+-                        {{ substr($headerSettings['brand_name'] ?? 'F', 0, 1) }}
+-                    </div>
+-                    <span class="text-xl md:text-2xl font-bold text-gray-900 tracking-tight group-hover:text-blue-600 transition-colors">
+-                        {{ $headerSettings['brand_name'] ?? 'FlexBiz' }}<span class="text-blue-600 group-hover:text-black">.</span>
+-                    </span>
+-                </a>
+-            </div>
+-
+-            {{-- CENTER SECTION: SEARCH BAR (Desktop) --}}
+-            <div class="hidden lg:flex flex-1 max-w-xl relative">
+-                {{-- Giả sử route product.list đã có --}}
+-                <form action="{{ Route::has('product.list') ? route('product.list') : '#' }}" method="GET" class="w-full">
+-                    <input type="text" name="search" placeholder="Tìm kiếm sản phẩm, thương hiệu..." class="w-full bg-gray-100 border-none rounded-full py-2.5 pl-5 pr-12 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder-gray-500">
+-                    <button type="submit" class="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 bg-white rounded-full text-gray-500 hover:text-blue-600 shadow-sm hover:shadow transition">
+-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+-                    </button>
+-                </form>
+-            </div>
+-
+-            {{-- RIGHT SECTION: NAVIGATION & ICONS --}}
+-            <div class="flex items-center gap-1 md:gap-6">
+-                {{-- Mobile Search Toggle --}}
+-                <button @click="mobileSearchOpen = !mobileSearchOpen" class="lg:hidden p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition">
+-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+-                </button>
+-
+-                {{-- DESKTOP MENU (DYNAMIC RENDER) --}}
+-                <nav class="hidden xl:flex items-center gap-6 text-sm font-bold text-gray-700">
+-                    @if(isset($mainMenu) && $mainMenu->isNotEmpty())
+-                        @foreach($mainMenu as $item)
+-                            <div class="relative group">
+-                                <a href="{{ $item->url }}" target="{{ $item->target }}" class="hover:text-blue-600 transition flex items-center gap-1 py-4">
+-                                    {{ $item->title }}
+-                                    @if($item->children->isNotEmpty())
+-                                        <svg class="w-3 h-3 text-gray-400 group-hover:text-blue-600 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+-                                    @endif
+-                                </a>
+-
+-                                {{-- Dropdown Child Menu --}}
+-                                @if($item->children->isNotEmpty())
+-                                    <div class="absolute left-0 top-full w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
+-                                        <div class="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-2 mt-1">
+-                                            @foreach($item->children as $child)
+-                                                <a href="{{ $child->url }}" target="{{ $child->target }}" class="block px-4 py-2.5 hover:bg-blue-50 hover:text-blue-600 text-sm font-medium transition text-gray-600">
+-                                                    {{ $child->title }}
+-                                                </a>
+-                                            @endforeach
+-                                        </div>
+-                                    </div>
+-                                @endif
+-                            </div>
+-                        @endforeach
+-                    @endif
+-                </nav>
+-
+-                {{-- ICONS WRAPPER --}}
+-                <div class="flex items-center gap-2 md:border-l md:border-gray-200 md:pl-6">
+-
+-                    {{-- Wishlist (Static for now) --}}
+-                    @livewire('website.wishlist.wishlist-icon')
+-
+-                    {{-- Cart Icon (Livewire Component) --}}
+-                    @if (class_exists(\Modules\Website\Livewire\Cart\CartIcon::class))
+-                        @livewire('website.cart.cart-icon')
+-                    @else
+-                        {{-- Fallback Cart Icon --}}
+-                        <a href="#" class="p-2 text-gray-600 hover:text-blue-600 transition relative">
+-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+-                        </a>
+-                    @endif
+-
+-                    {{-- User Auth Dropdown --}}
+-                    <div class="hidden lg:block relative">
+-                        @auth
+-                            <button @click="userDropdownOpen = !userDropdownOpen" class="flex items-center gap-2 hover:bg-gray-50 p-1.5 rounded-full border border-transparent hover:border-gray-200 transition">
+-                                <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=random" class="w-8 h-8 rounded-full border border-gray-200" alt="Avatar">
+-                                <span class="hidden md:block text-sm font-bold text-gray-700 max-w-[100px] truncate">{{ Auth::user()->name }}</span>
+-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+-                            </button>
+ 
+-                            {{-- Dropdown Body --}}
+-                            <div x-show="userDropdownOpen" @click.outside="userDropdownOpen = false" x-transition class="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-2xl py-2 ring-1 ring-black ring-opacity-5 z-50 overflow-hidden" style="display: none;">
+-                                <div class="px-4 py-3 border-b border-gray-100 bg-gray-50">
+-                                    <p class="text-xs text-gray-500 uppercase tracking-wider font-bold">Tài khoản</p>
+-                                    <p class="text-sm font-medium text-gray-900 truncate">{{ Auth::user()->email }}</p>
+-                                </div>
+-                                <div class="py-1">
+-                                    <a href="{{ Route::has('account.profile') ? route('account.profile') : '#' }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">Hồ sơ cá nhân</a>
+-                                    <a href="{{ Route::has('account.orders') ? route('account.orders') : '#' }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">Đơn hàng của tôi</a>
+-                                </div>
+-                                <div class="border-t border-gray-100 py-1">
+-                                    <form method="POST" action="{{ route('logout') }}">
+-                                        @csrf
+-                                        <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Đăng xuất</button>
+-                                    </form>
+-                                </div>
+-                            </div>
+-                        @else
+-                            <div class="flex items-center gap-3">
+-                                <a href="{{ route('login') }}" class="hidden md:inline-block text-sm font-bold text-gray-700 hover:text-blue-600">Đăng nhập</a>
+-                                <a href="{{ route('register') }}" class="px-5 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-full hover:bg-blue-600 hover:shadow-lg transition">Đăng ký</a>
+-                            </div>
+-                        @endauth
+-                    </div>
++    <div class="flex items-center gap-x-4 lg:gap-x-6">
++        {{-- Nút Xem Website (Tiện ích cho Admin) --}}
++        <a href="/" target="_blank" class="text-xs font-medium text-gray-500 hover:text-indigo-600 flex items-center gap-1 border border-gray-200 px-2 py-1 rounded">
++            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
++            Xem Website
++        </a>
++
++        {{-- Thông báo (Giữ nguyên UI của bạn) --}}
++        <button type="button" class="-m-2.5 p-2.5 text-gray-400 hover:text-indigo-600 relative">
++            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
++                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
++            </svg>
++            <span class="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white animate-pulse"></span>
++        </button>
++
++        <div class="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200" aria-hidden="true"></div>
++
++        {{-- User Menu (Giữ nguyên logic của bạn) --}}
++        <div class="relative" x-data="{ open: false }">
++            <button @click="open = !open" type="button" class="-m-1.5 flex items-center p-1.5">
++                <div class="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
++                    {{ substr($user->name ?? 'A', 0, 1) }}
+                 </div>
+-            </div>
+-        </div>
++                <span class="hidden lg:flex lg:items-center ml-3">
++                    <span class="text-sm font-semibold leading-6 text-gray-900">{{ $user->name ?? 'Admin' }}</span>
++                </span>
++            </button>
+ 
+-        {{-- 3. MOBILE SEARCH BAR (Slide Down) --}}
+-        <div x-show="mobileSearchOpen" x-transition class="lg:hidden pb-4" style="display: none;">
+-            <form action="{{ Route::has('product.list') ? route('product.list') : '#' }}" method="GET" class="relative">
+-                <input type="text" name="search" placeholder="Tìm kiếm sản phẩm..." class="w-full bg-gray-100 border-none rounded-xl py-3 pl-12 pr-4 text-gray-900 focus:ring-2 focus:ring-blue-500">
+-                <svg class="w-5 h-5 text-gray-500 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+-            </form>
++            {{-- Dropdown content... --}}
+         </div>
+     </div>
+-
+-    {{-- 4. MOBILE OFF-CANVAS MENU (Slide Over) --}}
+-    <template x-teleport="body">
+-        <div x-show="mobileMenuOpen" class="fixed inset-0 z-[9999]" style="display: none;">
+-            {{-- Backdrop --}}
+-            <div x-show="mobileMenuOpen"
+-                 x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+-                 x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+-                 @click="mobileMenuOpen = false"
+-                 class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+-
+-            {{-- Sidebar Content --}}
+-            <div x-show="mobileMenuOpen"
+-                 x-transition:enter="transition ease-in-out duration-300 transform" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
+-                 x-transition:leave="transition ease-in-out duration-300 transform" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full"
+-                 class="absolute left-0 top-0 bottom-0 bg-white w-[85%] max-w-sm h-full shadow-2xl overflow-y-auto z-10 flex flex-col">
+-
+-                {{-- Header Sidebar --}}
+-                <div class="p-6 bg-gray-900 text-white shrink-0">
+-                    <div class="flex justify-between items-start mb-6">
+-                        <span class="text-xl font-bold">Menu</span>
+-                        <button @click="mobileMenuOpen = false" class="text-gray-400 hover:text-white p-1">
+-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+-                        </button>
+-                    </div>
+-
+-                    @auth
+-                        <div class="flex items-center gap-3">
+-                            <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=random" class="w-12 h-12 rounded-full border-2 border-white/20">
+-                            <div>
+-                                <p class="font-bold text-lg">{{ Auth::user()->name }}</p>
+-                                <p class="text-xs text-gray-400 truncate max-w-[180px]">{{ Auth::user()->email }}</p>
+-                            </div>
+-                        </div>
+-                    @else
+-                        <div class="space-y-3">
+-                            <p class="text-gray-400 text-sm mb-2">Chào mừng đến với {{ $headerSettings['brand_name'] ?? 'Store' }}!</p>
+-                            <div class="grid grid-cols-2 gap-3">
+-                                <a href="{{ route('login') }}" class="text-center py-2 bg-white/10 rounded-lg hover:bg-white/20 transition text-sm font-bold">Đăng nhập</a>
+-                                <a href="{{ route('register') }}" class="text-center py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition text-sm font-bold">Đăng ký</a>
+-                            </div>
+-                        </div>
+-                    @endauth
+-                </div>
+-
+-                {{-- Mobile Menu Items (Dynamic) --}}
+-                <div class="p-4 space-y-1 overflow-y-auto grow">
+-                    {{-- Logic fallback: Nếu không có mobile menu riêng thì dùng main menu --}}
+-                    @php
+-                        $menuToRender = (isset($mobileMenu) && $mobileMenu->isNotEmpty()) ? $mobileMenu : $mainMenu;
+-                    @endphp
+-
+-                    @if(isset($menuToRender) && $menuToRender->isNotEmpty())
+-                        @foreach($menuToRender as $item)
+-                            <div x-data="{ open: false }">
+-                                <div class="flex items-center justify-between group">
+-                                    <a href="{{ $item->url }}" class="block flex-1 px-4 py-3 text-gray-700 font-medium hover:bg-gray-50 rounded-xl hover:text-blue-600 transition">
+-                                        {{ $item->title }}
+-                                    </a>
+-                                    @if($item->children->isNotEmpty())
+-                                        <button @click="open = !open" class="p-3 text-gray-400 hover:text-blue-600 transition-colors">
+-                                            <svg :class="{'rotate-180': open}" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+-                                        </button>
+-                                    @endif
+-                                </div>
+-
+-                                {{-- Child Mobile Menu (Accordion) --}}
+-                                @if($item->children->isNotEmpty())
+-                                    <div x-show="open" x-collapse class="pl-4 space-y-1 bg-gray-50 rounded-lg mb-1" style="display: none;">
+-                                        @foreach($item->children as $child)
+-                                            <a href="{{ $child->url }}" class="block px-4 py-2.5 text-sm text-gray-600 hover:text-blue-600">
+-                                                - {{ $child->title }}
+-                                            </a>
+-                                        @endforeach
+-                                    </div>
+-                                @endif
+-                            </div>
+-                        @endforeach
+-                    @else
+-                        <p class="text-center text-gray-400 text-sm py-4">Chưa có menu nào.</p>
+-                    @endif
+-
+-                    @auth
+-                        <div class="border-t border-gray-100 my-2 pt-2">
+-                            <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Cá nhân</p>
+-                            <a href="{{ Route::has('account.profile') ? route('account.profile') : '#' }}" class="block px-4 py-3 text-gray-700 font-medium hover:bg-gray-50 rounded-xl hover:text-blue-600 transition">Hồ sơ cá nhân</a>
+-                            <a href="{{ Route::has('account.orders') ? route('account.orders') : '#' }}" class="block px-4 py-3 text-gray-700 font-medium hover:bg-gray-50 rounded-xl hover:text-blue-600 transition">Đơn hàng của tôi</a>
+-                            <form method="POST" action="{{ route('logout') }}">
+-                                @csrf
+-                                <button type="submit" class="w-full text-left px-4 py-3 text-red-600 font-medium hover:bg-red-50 rounded-xl transition flex items-center gap-3">
+-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+-                                    Đăng xuất
+-                                </button>
+-                            </form>
+-                        </div>
+-                    @endauth
+-                </div>
+-
+-                {{-- Footer Contact Info (Dynamic) --}}
+-                <div class="p-6 bg-gray-50 mt-auto border-t border-gray-100 pb-10 shrink-0">
+-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Liên hệ</p>
+-                    <div class="space-y-3 text-sm text-gray-600">
+-                        <div class="flex items-center gap-2">
+-                            <span class="text-blue-600 font-bold">Hotline:</span> {{ $headerSettings['hotline'] ?? 'N/A' }}
+-                        </div>
+-                        <div class="flex items-center gap-2">
+-                            <span class="text-blue-600 font-bold">Email:</span> {{ $headerSettings['email'] ?? 'N/A' }}
+-                        </div>
+-                    </div>
+-                </div>
+-            </div>
+-        </div>
+-    </template>
+ </header>

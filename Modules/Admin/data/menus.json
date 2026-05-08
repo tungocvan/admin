@@ -1,0 +1,116 @@
+[
+    {
+        "name": "Dashboard",
+        "url": "\/admin",
+        "icon": "home",
+        "can": "view_admin",
+        "is_active": true,
+        "children": []
+    },
+    {
+        "name": "Quản lý Chat",
+        "url": "\/admin\/chat",
+        "icon": "users",
+        "can": "view_users",
+        "is_active": true,
+        "children": []
+    },
+    {
+        "name": "Quản lý các Chuyên mục",
+        "url": "\/admin\/category",
+        "icon": "Menu",
+        "can": "view_customer",
+        "is_active": true,
+        "children": []
+    },
+    {
+        "name": "Phân quyền & Nhân sự",
+        "url": null,
+        "icon": "shield-check",
+        "can": "view_admin",
+        "is_active": true,
+        "children": [
+            {
+                "name": "Vai trò (Roles)",
+                "url": "\/admin\/system\/roles",
+                "icon": null,
+                "can": "view_role",
+                "is_active": true,
+                "children": []
+            },
+            {
+                "name": "Nhân viên (Staff)",
+                "url": "\/admin\/system\/staff",
+                "icon": null,
+                "can": "view_admin",
+                "is_active": true,
+                "children": []
+            }
+        ]
+    },
+    {
+        "name": "Cấu hình Menu",
+        "url": "\/admin\/menus",
+        "icon": "menu",
+        "can": "create_admin",
+        "is_active": true,
+        "children": []
+    },
+    {
+        "name": "Công cụ Hệ thống",
+        "url": null,
+        "icon": "shield-check",
+        "can": "create_admin",
+        "is_active": true,
+        "children": [
+            {
+                "name": "Cấu hình Hệ thống",
+                "url": "\/admin\/system",
+                "icon": "home",
+                "can": "create_admin",
+                "is_active": true,
+                "children": []
+            },
+            {
+                "name": "Quản lý ENV",
+                "url": "\/admin\/settings\/env",
+                "icon": null,
+                "can": "view_role",
+                "is_active": true,
+                "children": []
+            },
+            {
+                "name": "Quản lý Modules",
+                "url": "admin\/modules",
+                "icon": null,
+                "can": "create_admin",
+                "is_active": true,
+                "children": []
+            },
+            {
+                "name": "Quản lý Database",
+                "url": "\/admin\/database",
+                "icon": "home",
+                "can": "view_setting",
+                "is_active": true,
+                "children": []
+            },
+            {
+                "name": "Thiết lập Biến",
+                "url": "\/admin\/settings",
+                "icon": null,
+                "can": "view_staff",
+                "is_active": true,
+                "children": []
+            },
+            {
+                "name": "Thiết lập Menu Header",
+                "url": "\/admin\/admin-header",
+                "icon": null,
+                "can": "view_role",
+                "is_active": true,
+                "children": []
+            }
+        ]
+    }
+]

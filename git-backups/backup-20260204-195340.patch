@@ -1,0 +1,88 @@
+diff --git a/Modules/Website/Livewire/Chat/ChatWidget.php b/Modules/Website/Livewire/Chat/ChatWidget.php
+index 2fd8e1b..69044d1 100644
+--- a/Modules/Website/Livewire/Chat/ChatWidget.php
++++ b/Modules/Website/Livewire/Chat/ChatWidget.php
+@@ -5,6 +5,7 @@
+ use Modules\Admin\Services\ChatService;
+ use Illuminate\Support\Facades\Auth;
+ use Illuminate\Support\Str;
++use Modules\Admin\Models\ChatSession;
+ 
+ class ChatWidget extends Component
+ {
+@@ -79,7 +80,7 @@ public function render()
+     {
+         $messages = [];
+         if ($this->step === 'chat') {
+-            $session = \Modules\Admin\Models\ChatSession::where('session_token', $this->sessionToken)
++            $session = ChatSession::where('session_token', $this->sessionToken)
+                 ->with(['messages' => fn($q) => $q->orderBy('created_at', 'asc')])
+                 ->first();
+ 
+diff --git a/resources/js/echo.js b/resources/js/echo.js
+index acf422c..5d7a335 100644
+--- a/resources/js/echo.js
++++ b/resources/js/echo.js
+@@ -1,39 +1,14 @@
+ import Echo from "laravel-echo";
+ import { io } from "socket.io-client";
+ 
+-// Lấy cấu hình từ biến global hoặc mặc định
+-const SOCKET_HOST = window.CHAT_CONFIG_HOST || "node.tungocvan.com";
+-
+-// Khởi tạo trực tiếp client
+-const socket = io(`${SOCKET_HOST}`, {
+-    transports: ["websocket", "polling"],
+-    withCredentials: false,
+-});
++const SOCKET_HOST = window.CHAT_CONFIG_HOST || "node.tungocvan.com:6002";
+ 
+ window.io = io;
+ 
+-// Nếu muốn dùng Laravel Echo:
+ window.Echo = new Echo({
+     broadcaster: "socket.io",
+-    client: io,
+-    host: `${SOCKET_HOST}`,
+-});
+-
+-// Tạo socket client toàn cục
+-window.socket = io(`${SOCKET_HOST}`, {
+-    transports: ["websocket", "polling"],
++    host: SOCKET_HOST,
++    transports: ["websocket"],
+ });
+ 
+-
+-
+-socket.on("connect", () => {
+-    console.log("✅ Socket.IO connected (echo.js):", socket.id);
+-    console.log("✅SOCKET_HOST: ", SOCKET_HOST );
+-});
+-
+-socket.on("disconnect", () => {
+-    console.log("❌ Socket.IO disconnected (echo.js)");
+-});
+-
+-
+-// xem log nodejs: pm2 monit
++console.log("✅ Laravel Echo initialized:", SOCKET_HOST);
+diff --git a/socket/server.js b/socket/server.js
+index f84918e..977bbdb 100644
+--- a/socket/server.js
++++ b/socket/server.js
+@@ -48,11 +48,13 @@ io.on("connection", (socket) => {
+ app.post("/broadcast", (req, res) => {
+     const { channel, event, data } = req.body;
+ 
+-    io.emit(event, data);
++    io.to(channel).emit(event, data);
+ 
++    console.log("📡 Broadcast:", channel, event);
+     res.json({ ok: true });
+ });
+ 
++
+ app.get("/", (req, res) => res.send("Socket server is running..."));
+ 
+ const PORT = process.env.PORT || 6002;
