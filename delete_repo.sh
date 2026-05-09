@@ -3,32 +3,32 @@
 # load env
 source .env.sh
 
-# lấy tham số repo name
 REPO_NAME="$1"
 
-# validate
 if [ -z "$REPO_NAME" ]; then
   echo "❌ Missing repo name"
-  echo "👉 Usage: ./delete-repo.sh <repo-name>"
   exit 1
 fi
 
-# confirm tránh xoá nhầm
 read -p "⚠️ Delete repo '$REPO_NAME' ? (y/N): " confirm
+[[ "$confirm" != "y" ]] && exit 0
 
-if [[ "$confirm" != "y" ]]; then
-  echo "❌ Cancelled"
-  exit 0
-fi
+# trim tránh lỗi ký tự ẩn
+GITHUB_USERNAME=$(echo "$GITHUB_USERNAME" | tr -d '\r\n ')
+REPO_NAME=$(echo "$REPO_NAME" | tr -d '\r\n ')
 
-# call GitHub API
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
-  -H "Authorization: token $GITHUB_TOKEN" \
-  https://api.github.com/repos/$GITHUB_USERNAME/$REPO_NAME)
+URL="https://api.github.com/repos/$GITHUB_USERNAME/$REPO_NAME"
 
-# handle response
+echo "DEBUG URL: [$URL]"
+
+STATUS=$(curl -s -o response.txt -w "%{http_code}" -X DELETE \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github+json" \
+  "$URL")
+
 if [ "$STATUS" -eq 204 ]; then
   echo "✅ Deleted repo: $REPO_NAME"
 else
-  echo "❌ Failed to delete repo: $REPO_NAME (HTTP $STATUS)"
+  echo "❌ Failed (HTTP $STATUS)"
+  cat response.txt
 fi
