@@ -17,7 +17,7 @@
                 Import
             </button>
 
-            <a href="{{ route('admin.staff.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition">
+            <a href="{{ route('admin.user.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition">
                 <svg class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Thêm nhân viên
             </a>
@@ -166,7 +166,7 @@
 
                     {{-- Edit --}}
                     <a
-                        href="{{ route('admin.staff.edit', $user->id) }}"
+                        href="{{ route('admin.user.edit', $user->id) }}"
                         class="text-gray-400 hover:text-indigo-600 transition"
                         title="Chỉnh sửa"
                     >

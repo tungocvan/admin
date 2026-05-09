@@ -23,7 +23,7 @@
 
                 <div class="mt-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     {{-- Nút Download thông qua Controller chuẩn --}}
-                    <a href="{{ route('admin.database.download', $file['name']) }}"
+                    <a href="{{ route('admin.system.database.download', $file['name']) }}"
                         class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs font-medium hover:bg-blue-100">
                         Download
                     </a>

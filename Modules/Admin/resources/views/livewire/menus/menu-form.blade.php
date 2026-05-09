@@ -24,13 +24,13 @@
 
             <div>
                 <label class="block text-sm font-bold text-gray-700 mb-1">Tên hiển thị <span class="text-red-500">*</span></label>
-                <input type="text" wire:model="name" class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 font-bold" placeholder="VD: Sản phẩm">
+                <input type="text" wire:model="name" class="block w-full rounded-md border-0 py-2.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="Tên Menu">
                 @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
             </div>
 
             <div>
                 <label class="block text-sm font-bold text-gray-700 mb-1">Menu cha</label>
-                <select wire:model="parent_id" class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 text-sm">
+                <select wire:model="parent_id" class="block w-full rounded-md border-0 py-2.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
                     <option value="">-- Là mục gốc --</option>
                     @foreach($this->parents as $parent)
                         <option value="{{ $parent->getKey() }}">{{ $parent->view_name }}</option>
@@ -44,14 +44,14 @@
                     <label class="block text-sm font-bold text-gray-700 mb-1">Đường dẫn (URL)</label>
                     <div class="flex rounded-md shadow-sm">
                         <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">{{ url('/') }}/</span>
-                        <input type="text" wire:model="url" class="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border-gray-300 focus:ring-indigo-500 sm:text-sm font-mono" placeholder="admin/products">
+                        <input type="text" wire:model="url" class="block w-full rounded-md border-0 py-2.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="admin/products">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">Icon (Heroicons Outline)</label>
                     <div class="flex gap-3">
-                        <input type="text" wire:model.live="icon" class="flex-1 rounded-lg border-gray-300 focus:ring-indigo-500 font-mono text-sm" placeholder="home">
+                        <input type="text" wire:model.live="icon" class="block w-full rounded-md border-0 py-2.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" placeholder="home">
                         <div class="w-10 h-10 flex items-center justify-center bg-gray-100 rounded border border-gray-200 text-indigo-600">
                             @if($icon) <x-icon name="{{ $icon }}" class="w-6 h-6" /> @endif
                         </div>
@@ -61,7 +61,7 @@
 
             <div>
                 <label class="block text-sm font-bold text-gray-700 mb-1">Yêu cầu quyền (Permission)</label>
-                <select wire:model="can" class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 text-sm">
+                <select wire:model="can" class="block w-full rounded-md border-0 py-2.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                     <option value="">-- Công khai --</option>
                     @foreach($permissions as $perm)
                         <option value="{{ $perm->name }}">{{ $perm->name }}</option>

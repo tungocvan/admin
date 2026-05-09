@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Role\Livewire\System;
+namespace Modules\Role\Livewire;
 
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -175,6 +175,6 @@ class RoleTable extends Component
             ->latest()
             ->paginate($this->perPage);
 
-        return view('Role::livewire.system.role-table', ['roles' => $roles]);
+        return view('Role::livewire.role-table', ['roles' => $roles]);
     }
 }

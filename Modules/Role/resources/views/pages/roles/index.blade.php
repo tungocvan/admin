@@ -3,5 +3,5 @@
 @section('title', 'Quản lý Phân quyền (Roles)')
 
 @section('content')
-    <livewire:role.system.role-table />
+     @livewire('role.role-table')
 @endsection

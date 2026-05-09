@@ -2,6 +2,6 @@
 
 @section('title', 'Chỉnh sửa Vai trò')
 
-@section('content')
-    <livewire:role.system.role-form :id="$id" />
+@section('content')    
+     @livewire('role.role-form',["id" => $id])
 @endsection

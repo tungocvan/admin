@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\User\Livewire\System;
+namespace Modules\User\Livewire;
 
 use Livewire\Component;
 use App\Models\User;
@@ -8,7 +8,7 @@ use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 
-class StaffForm extends Component
+class UserForm extends Component
 {
     // ========================
     // CONST (tránh hardcode)
@@ -144,7 +144,7 @@ class StaffForm extends Component
             ->orderBy('name')
             ->get();
 
-        return view('User::livewire.system.staff-form', [
+        return view('User::livewire.user-form', [
             'roles' => $roles
         ]);
     }

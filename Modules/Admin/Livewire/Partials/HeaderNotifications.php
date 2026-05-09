@@ -4,10 +4,12 @@ namespace Modules\Admin\Livewire\Partials;
 
 use Livewire\Component;
 
-class Header extends Component
+class HeaderNotifications extends Component
 {
+    
+
     public function render()
     {
-        return view('Admin::livewire.partials.header');
+        return view('Admin::livewire.partials.header-notifications');
     }
 }

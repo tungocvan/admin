@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Role\Livewire\System;
+namespace Modules\Role\Livewire;
 
 use Livewire\Component;
 use Spatie\Permission\Models\Role;
@@ -78,6 +78,6 @@ class RoleForm extends Component
 
     public function render()
     {
-        return view('Role::livewire.system.role-form');
+        return view('Role::livewire.role-form');
     }
 }

@@ -53,7 +53,17 @@ class MenuTable extends Component
     // ======================
     // COMPUTED
     // ======================
-
+    public function updatedSelectAll($value)
+    {
+        if ($value) {
+            $this->selectedMenus = $this->baseQuery()      
+                ->pluck('id')
+                ->map(fn($id) => (string) $id)
+                ->toArray();
+        } else {
+            $this->selectedMenus = [];
+        }
+    }
     public function getImportFileNameProperty()
     {
         return $this->importFile?->getClientOriginalName();
@@ -115,6 +125,7 @@ class MenuTable extends Component
 
     public function toggleStatus($id)
     {
+        
         if ($menu = Category::find($id)) {
             $menu->update(['is_active' => !$menu->is_active]);
             $this->dispatch('notify', content: 'Đã cập nhật trạng thái.', type: 'success');
@@ -133,7 +144,8 @@ class MenuTable extends Component
             $this->duplicateRecursive($original, $original->parent_id);
         });
 
-        $this->notify('Đã nhân bản menu thành công.');
+      
+        $this->dispatch('notify', content: 'Đã nhân bản menu thành công.', type: 'success', action:'reload');
     }
 
     private function duplicateRecursive($node, $parentId)
@@ -189,7 +201,7 @@ class MenuTable extends Component
         $this->selectedMenus = [];
         $this->selectAll = false;
 
-        $this->dispatch('notify', content: "Đã xóa {$count} menu thành công.", type: 'success');
+        $this->dispatch('notify', content: "Đã xóa {$count} menu thành công.", type: 'success',action:'reload');
     }
 
     public function bulkToggleStatus($status)
@@ -244,14 +256,14 @@ class MenuTable extends Component
         $this->showBulkPermissionsModal = false;
         $this->bulkPermission = null;
 
-        $this->dispatch('notify', content: "Đã cập nhật quyền cho {$count} menu thành '{$permissionName}'.", type: 'success');
+        $this->dispatch('notify', content: "Đã cập nhật quyền cho {$count} menu thành '{$permissionName}'.", type: 'success',action:'reload');
     }
 
     private function resetSelection()
     {
         $this->selectedMenus = [];
         $this->selectAll = false;
-    }
+    } 
 
     // ======================
     // DRAG & DROP
@@ -261,7 +273,11 @@ class MenuTable extends Component
     {
         DB::transaction(fn() => $this->updateRecursive($list, null));
 
-        $this->notify('Đã cập nhật thứ tự menu.');
+        //$this->notify('Đã cập nhật thứ tự menu.'); 
+        DB::afterCommit(function () {
+                Category::clearMenuCache(); // 🔥 chỉ chạy khi commit thành công
+                $this->dispatch('notify', content: "Đã cập nhật thứ tự menu.", type: 'success',action:'reload',duration:100);
+        });
     }
 
     private function updateRecursive($items, $parentId)

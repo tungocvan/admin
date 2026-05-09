@@ -101,7 +101,7 @@
                                 </button>
                             @else
                                 <div class="flex items-center gap-3">
-                                    <a href="{{ route('admin.database.download', ['filename' => $table['backup_file']]) }}"
+                                    <a href="{{ route('admin.system.database.download', ['filename' => $table['backup_file']]) }}"
                                         target="_blank"
                                         class="text-green-600 hover:text-green-900 flex items-center gap-1">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

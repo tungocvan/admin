@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\User\Livewire\System;
+namespace Modules\User\Livewire;
 
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 
-class StaffTable extends Component
+class UserTable extends Component
 {
     use WithPagination, WithFileUploads;
 
@@ -238,7 +238,7 @@ class StaffTable extends Component
     // ========================
     public function render()
     {
-        return view('User::livewire.system.staff-table', [
+        return view('User::livewire.user-table', [
             'users' => $this->getQuery()->paginate($this->perPage),
             'roles' => Role::select('id', 'name')->get(),
         ]);

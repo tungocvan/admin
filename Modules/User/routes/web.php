@@ -7,9 +7,9 @@ use Modules\User\Http\Controllers\UserController;
 //     Route::get('/', [UsersController::class,'index'])->name('index');
 // });
 Route::middleware(['web','auth:admin'])->prefix('admin')->name('admin.')->group(function () {
-  Route::prefix('/system')->name('staff.')->group(function() {
-            Route::get('/staff', [UserController::class, 'index'])->name('index');
-            Route::get('/staff/create', [UserController::class, 'create'])->name('create');
-            Route::get('/staff/{id}/edit', [UserController::class, 'edit'])->name('edit');
+  Route::prefix('/user')->name('user.')->group(function() {
+            Route::get('/', [UserController::class, 'index'])->name('index');
+            Route::get('/create', [UserController::class, 'create'])->name('create');
+            Route::get('/{id}/edit', [UserController::class, 'edit'])->name('edit');
         });
 });
