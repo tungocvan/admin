@@ -73,7 +73,7 @@ class RoleForm extends Component
         }
 
         session()->flash('success', 'Lưu vai trò thành công (Guard: Admin).');
-        return redirect()->route('admin.roles.index');
+        return redirect()->route('admin.role.index');
     }
 
     public function render()

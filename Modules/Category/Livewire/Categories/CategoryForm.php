@@ -4,120 +4,168 @@ namespace Modules\Category\Livewire\Categories;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Modules\Category\Models\Category;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Modules\Category\Models\Category;
+use Modules\Category\Models\CategoryType;
+use Modules\Category\Services\CategoryService;
 
 class CategoryForm extends Component
 {
     use WithFileUploads;
 
-    public $categoryId = null;
+    public $categoryId;
 
-    // Fields
-    public $name, $slug;
-    public $parent_id = null;
+    public $name;
+    public $slug;
+    public $type;
+    public $parent_id;
+
     public $sort_order = 0;
     public $is_active = true;
-    public $type = 'product'; // Mặc định Product
 
-    // Image
     public $newImage;
     public $oldImage;
 
-    // Load danh sách danh mục cha theo TYPE
-    public function getParentsProperty()
+    protected CategoryService $service;
+
+    public function boot(CategoryService $service)
     {
-        $query = Category::where('type', $this->type);
-
-        // Nếu đang edit, loại bỏ chính nó
-        if ($this->categoryId) {
-            $query->where('id', '!=', $this->categoryId);
-        }
-
-        $categories = $query->orderBy('sort_order')->orderBy('name')->get();
-
-        return $this->buildTreeOption($categories);
+        $this->service = $service;
     }
 
-    private function buildTreeOption($categories, $parentId = null, $prefix = '')
-    {
-        $result = [];
-        foreach ($categories as $category) {
-            if ($category->parent_id == $parentId) {
-                // Tạo tên hiển thị dạng tree: "-- Name"
-                $category->view_name = $prefix . $category->name;
-                $result[] = $category;
-                $children = $this->buildTreeOption($categories, $category->id, $prefix . '-- ');
-                $result = array_merge($result, $children);
-            }
-        }
-        return $result;
-    }
-
+    // =========================
+    // INIT
+    // =========================
     public function mount($id = null)
     {
         if ($id) {
-            $category = Category::findOrFail($id);
-            $this->categoryId = $category->id;
-            $this->name = $category->name;
-            $this->slug = $category->slug;
-            $this->parent_id = $category->parent_id;
-            $this->sort_order = $category->sort_order;
-            $this->is_active = (bool) $category->is_active;
-            $this->type = $category->type;
-            $this->oldImage = $category->image;
+            $c = Category::findOrFail($id);
+
+            $this->fill([
+                'categoryId' => $c->id,
+                'name' => $c->name,
+                'slug' => $c->slug,
+                'type' => $c->type,
+                'parent_id' => $c->parent_id,
+                'sort_order' => $c->sort_order,
+                'is_active' => $c->is_active,
+                'oldImage' => $c->image
+            ]);
+        } else {
+            $this->type = CategoryType::where('is_active', true)->value('type');
         }
     }
 
-    // Khi đổi Type -> Reset Parent ID (Vì Parent của Product ko thể là Parent của Post)
+    // =========================
+    // COMPUTED
+    // =========================
+    public function getTypesProperty()
+    {
+        return CategoryType::where('is_active', true)->get();
+    }
+
+    public function getParentsProperty()
+    {
+        $list = Category::where('type', $this->type)
+            ->when($this->categoryId, fn($q) => $q->where('id', '!=', $this->categoryId))
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        return $this->buildTree($list);
+    }
+
+    // =========================
+    // TREE BUILDER
+    // =========================
+    private function buildTree($items, $parent = null, $prefix = '')
+    {
+        $res = [];
+
+        foreach ($items as $item) {
+            if ($item->parent_id == $parent) {
+
+                $item->view_name = $prefix . $item->name;
+                $res[] = $item;
+
+                $res = array_merge(
+                    $res,
+                    $this->buildTree($items, $item->id, $prefix . '-- ')
+                );
+            }
+        }
+
+        return $res;
+    }
+
+    // =========================
+    // EVENTS
+    // =========================
+    public function updatedName()
+    {
+        if (!$this->categoryId) {
+            $this->slug = Str::slug($this->name);
+        }
+    }
+
     public function updatedType()
     {
         $this->parent_id = null;
     }
 
-    public function updatedName($value)
-    {
-        if (!$this->categoryId) {
-            $this->slug = Str::slug($value);
-        }
-    }
-
+    // =========================
+    // VALIDATION
+    // =========================
     protected function rules()
     {
         return [
             'name' => 'required|min:2',
-            'slug' => 'required|unique:categories,slug,' . $this->categoryId,
-            'type' => 'required|in:product,post',
-            'parent_id' => 'nullable|exists:categories,id',
-            'sort_order' => 'integer',
+
+            'slug' => [
+                'nullable',
+                Rule::unique('categories', 'slug')
+                    ->ignore($this->categoryId)
+                    ->where(fn($q) => $q->where('type', $this->type))
+            ],
+
+            'type' => 'required|exists:category_types,type',
+
+            'parent_id' => [
+                'nullable',
+                Rule::exists('categories', 'id')->where(fn($q) =>
+                    $q->where('type', $this->type)
+                ),
+            ],
+
             'newImage' => 'nullable|image|max:2048',
         ];
     }
 
+    // =========================
+    // SAVE
+    // =========================
     public function save()
     {
         $this->validate();
 
-        $data = [
-            'name' => $this->name,
-            'slug' => $this->slug ?: Str::slug($this->name),
-            'parent_id' => $this->parent_id ?: null,
-            'sort_order' => $this->sort_order,
-            'is_active' => $this->is_active,
-            'type' => $this->type,
-        ];
+        try {
+            $this->service->save([
+                'name' => $this->name,
+                'slug' => $this->slug,
+                'type' => $this->type,
+                'parent_id' => $this->parent_id,
+                'sort_order' => $this->sort_order,
+                'is_active' => $this->is_active,
+                'newImage' => $this->newImage,
+                'oldImage' => $this->oldImage,
+            ], $this->categoryId);
 
-        if ($this->newImage) {
-            $data['image'] = $this->newImage->store('categories', 'public');
+            return redirect()->route('admin.category.index');
+
+        } catch (\Throwable $e) {
+            $this->addError('parent_id', $e->getMessage());
         }
-
-        if ($this->categoryId) {
-            Category::find($this->categoryId)->update($data);
-        } else {
-            Category::create($data);
-        }
-
-        return redirect()->route('admin.category.index');
     }
 
     public function render()

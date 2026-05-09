@@ -9,6 +9,7 @@ use Modules\Role\database\seeders\RolesAndPermissionsSeeder;
 use Modules\User\database\seeders\UserAdminSeeder;
 use Modules\User\database\seeders\UserSeeder;
 use Modules\Admin\database\seeders\MenuCategorySeeder;
+use Database\Seeders\CategoryTypeSeeder;
 //use Modules\Website\database\Seeders\WebsiteDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
@@ -27,8 +28,10 @@ class DatabaseSeeder extends Seeder
             UserAdminSeeder::class,
             UserSeeder::class,
              // 5. Tạo menu sidebar
+            CategoryTypeSeeder::class,
             MenuCategorySeeder::class,
             // WebsiteDatabaseSeeder::class
+          
         ]);
 
     }

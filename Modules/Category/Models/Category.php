@@ -11,10 +11,8 @@ use Illuminate\Database\Eloquent\Builder;
 class Category extends Model
 {
     protected $fillable = [
-        'name', 'slug', 'url', 'icon', 'can', 'type',
-        'parent_id', 'description', 'image',
-        'is_active', 'sort_order',
-        'meta_title', 'meta_description','type_title'
+        'name','slug','type','parent_id','image',
+        'is_active','sort_order','meta_title','meta_description'
     ];
 
     protected $casts = [
@@ -22,87 +20,31 @@ class Category extends Model
         'sort_order' => 'integer',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
-    public function parent(): BelongsTo
+    public function typeInfo()
     {
-        return $this->belongsTo(Category::class, 'parent_id');
+        return $this->belongsTo(CategoryType::class, 'type', 'type');
     }
 
-    public function children(): HasMany
+    public function parent()
     {
-        return $this->hasMany(Category::class, 'parent_id')->orderBy('sort_order');
+        return $this->belongsTo(self::class, 'parent_id');
     }
 
-    // Đệ quy để lấy toàn bộ cây con
-    public function childrenRecursive(): HasMany
+    public function children()
+    {
+        return $this->hasMany(self::class, 'parent_id')->orderBy('sort_order');
+    }
+
+    public function childrenRecursive()
     {
         return $this->children()->with('childrenRecursive');
     }
 
-    // public function posts()
-    // {
-    //     // Quan hệ Many-to-Many qua bảng trung gian 'category_post'
-    //     return $this->belongsToMany(Post::class, 'category_post', 'category_id', 'post_id');
-    // }
-
-    // public function products(): BelongsToMany
-    // {
-    //     return $this->belongsToMany(WpProduct::class, 'category_product', 'category_id', 'product_id');
-    // }
-
-    public function scopePostType($query)
+    public function scopeOfType($q, $type)
     {
-        return $query->where('type', 'post');
+        return $q->where('type', $type);
     }
 
-    public function scopeProductType($query)
-    {
-        return $query->where('type', 'product');
-    }
-    public function scopeMenuType($query)
-    {
-        return $query->where('type', 'menu');
-    }
-    /*
-    |--------------------------------------------------------------------------
-    | Scopes
-    |--------------------------------------------------------------------------
-    */
-    public function scopeActive(Builder $query): Builder
-    {
-        return $query->where('is_active', true);
-    }
-
-    public function scopeSorted($query)
-    {
-        return $query->orderBy('sort_order', 'asc');
-    }
-
-    // Chỉ lấy các record là Menu
-    public function scopeMenu($query)
-    {
-        return $query->where('type', 'menu');
-    }
-
-    public function scopeRoot(Builder $query): Builder
-    {
-        return $query->whereNull('parent_id');
-    }
-
-    public function scopeOfType(Builder $query, string $type): Builder
-    {
-        return $query->where('type', $type);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Helpers (Logic Taxonomy Lõi)
-    |--------------------------------------------------------------------------
-    */
     public function getAllChildrenIds(): array
     {
         $ids = [$this->id];

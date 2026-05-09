@@ -18,6 +18,7 @@ return new class extends Migration
                             $table->text('icon')->nullable();
                             $table->string('can')->nullable();
                             $table->string('type')->nullable()->index(); // product, post, etc.
+                            $table->foreign('type')->references('type')->on('category_types')->cascadeOnDelete();
                             $table->string('type_title')->nullable();
                             $table->foreignId('parent_id')
                                 ->nullable()
@@ -31,6 +32,7 @@ return new class extends Migration
 
                             $table->string('meta_title')->nullable();
                             $table->string('meta_description')->nullable();
+                            $table->unique(['type', 'slug']);
 
                             $table->timestamps();
         });
