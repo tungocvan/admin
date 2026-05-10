@@ -11,7 +11,7 @@ class CategoryService
     public function save(array $data, $id = null)
     {
         // =========================
-        // 🔥 VALIDATE TREE LOOP
+        // TREE VALIDATION
         // =========================
         if (!empty($data['parent_id']) && $id) {
 
@@ -27,12 +27,12 @@ class CategoryService
         }
 
         // =========================
-        // 🔥 SLUG AUTO
+        // SLUG
         // =========================
         $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
 
         // =========================
-        // 🔥 IMAGE UPLOAD
+        // IMAGE
         // =========================
         if (!empty($data['newImage'])) {
 
@@ -45,12 +45,32 @@ class CategoryService
 
         unset($data['newImage'], $data['oldImage']);
 
-        // =========================
-        // 🔥 SAVE
-        // =========================
         return Category::updateOrCreate(
             ['id' => $id],
             $data
         );
+    }
+
+    // =========================
+    // TREE BUILDER
+    // =========================
+    public function buildTree($items, $parent = null, $prefix = '')
+    {
+        $res = [];
+
+        foreach ($items as $item) {
+            if ($item->parent_id == $parent) {
+
+                $item->view_name = $prefix . $item->name;
+                $res[] = $item;
+
+                $res = array_merge(
+                    $res,
+                    $this->buildTree($items, $item->id, $prefix . '-- ')
+                );
+            }
+        }
+
+        return $res;
     }
 }

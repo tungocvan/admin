@@ -4,7 +4,6 @@ namespace Modules\Category\Livewire\Categories;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Modules\Category\Models\Category;
 use Modules\Category\Models\CategoryType;
@@ -16,27 +15,33 @@ class CategoryForm extends Component
 
     public $categoryId;
 
-    public $name;
-    public $slug;
-    public $type;
-    public $parent_id;
-
+    public $name, $slug, $type, $parent_id;
     public $sort_order = 0;
     public $is_active = true;
 
-    public $newImage;
-    public $oldImage;
+    public $newImage, $oldImage;
 
     protected CategoryService $service;
+
+    // =========================
+    // TYPE MODAL
+    // =========================
+    public $showTypeModal = false;
+
+    public $selectedType;
+    public $editTitle;
+    public $editIcon;
+    public $editActive = true;
+
+    public $newType;
+    public $newTypeTitle;
+    public $newTypeIcon;
 
     public function boot(CategoryService $service)
     {
         $this->service = $service;
     }
 
-    // =========================
-    // INIT
-    // =========================
     public function mount($id = null)
     {
         if ($id) {
@@ -58,13 +63,16 @@ class CategoryForm extends Component
     }
 
     // =========================
-    // COMPUTED
+    // TYPES
     // =========================
     public function getTypesProperty()
     {
-        return CategoryType::where('is_active', true)->get();
+        return CategoryType::orderBy('sort_order')->get();
     }
 
+    // =========================
+    // PARENTS
+    // =========================
     public function getParentsProperty()
     {
         $list = Category::where('type', $this->type)
@@ -73,30 +81,112 @@ class CategoryForm extends Component
             ->orderBy('name')
             ->get();
 
-        return $this->buildTree($list);
+        return $this->service->buildTree($list);
     }
 
     // =========================
-    // TREE BUILDER
+    // MODAL
     // =========================
-    private function buildTree($items, $parent = null, $prefix = '')
+    public function openTypeModal()
     {
-        $res = [];
+        $this->reset([
+            'selectedType',
+            'editTitle',
+            'editIcon',
+            'editActive',
+            'newType',
+            'newTypeTitle',
+            'newTypeIcon'
+        ]);
 
-        foreach ($items as $item) {
-            if ($item->parent_id == $parent) {
+        $this->showTypeModal = true;
+    }
 
-                $item->view_name = $prefix . $item->name;
-                $res[] = $item;
-
-                $res = array_merge(
-                    $res,
-                    $this->buildTree($items, $item->id, $prefix . '-- ')
-                );
-            }
+    public function updatedSelectedType($value)
+    {
+        if (!$value) {
+            $this->reset(['editTitle', 'editIcon', 'editActive']);
+            return;
         }
 
-        return $res;
+        $type = CategoryType::where('type', $value)->first();
+
+        if ($type) {
+            $this->editTitle = $type->title;
+            $this->editIcon = $type->icon;
+            $this->editActive = (bool) $type->is_active;
+        }
+    }
+
+    // =========================
+    // CREATE TYPE
+    // =========================
+    public function createType()
+    {
+        $this->validate([
+            'newType' => 'required|alpha_dash|unique:category_types,type',
+            'newTypeTitle' => 'required|min:2',
+        ]);
+
+        CategoryType::create([
+            'type' => $this->newType,
+            'title' => $this->newTypeTitle,
+            'icon' => $this->newTypeIcon,
+            'is_active' => true,
+            'sort_order' => CategoryType::max('sort_order') + 1,
+        ]);
+
+        $this->type = $this->newType;
+        $this->showTypeModal = false;
+    }
+
+    // =========================
+    // UPDATE TYPE
+    // =========================
+    public function updateType()
+    {
+        $type = CategoryType::where('type', $this->selectedType)->firstOrFail();
+
+        $type->update([
+            'title' => $this->editTitle,
+            'icon' => $this->editIcon,
+            'is_active' => $this->editActive,
+        ]);
+        $this->dispatch(
+            'notify',
+            content: "Cập nhật loại thành công",
+            type: 'success'
+        );
+    }
+
+    // =========================
+    // DELETE TYPE
+    // =========================
+    public function deleteType()
+    {
+        $type = CategoryType::where('type', $this->selectedType)->firstOrFail();
+
+        $hasCategory = Category::where('type', $type->type)->exists();
+
+        if ($hasCategory) {
+            $this->dispatch(
+                'notify',
+                content: "Không thể xóa vì đã có danh mục",
+                type: 'error'
+            );
+            return;
+        }
+
+        $type->delete();
+
+        $this->dispatch(
+            'notify',
+            content: "Xóa loại thành công",
+            type: 'success'
+        );
+
+        // reset select
+        $this->selectedType = null;
     }
 
     // =========================
@@ -115,57 +205,27 @@ class CategoryForm extends Component
     }
 
     // =========================
-    // VALIDATION
-    // =========================
-    protected function rules()
-    {
-        return [
-            'name' => 'required|min:2',
-
-            'slug' => [
-                'nullable',
-                Rule::unique('categories', 'slug')
-                    ->ignore($this->categoryId)
-                    ->where(fn($q) => $q->where('type', $this->type))
-            ],
-
-            'type' => 'required|exists:category_types,type',
-
-            'parent_id' => [
-                'nullable',
-                Rule::exists('categories', 'id')->where(fn($q) =>
-                    $q->where('type', $this->type)
-                ),
-            ],
-
-            'newImage' => 'nullable|image|max:2048',
-        ];
-    }
-
-    // =========================
     // SAVE
     // =========================
     public function save()
     {
-        $this->validate();
+        $this->validate([
+            'name' => 'required|min:2',
+            'type' => 'required|exists:category_types,type',
+        ]);
 
-        try {
-            $this->service->save([
-                'name' => $this->name,
-                'slug' => $this->slug,
-                'type' => $this->type,
-                'parent_id' => $this->parent_id,
-                'sort_order' => $this->sort_order,
-                'is_active' => $this->is_active,
-                'newImage' => $this->newImage,
-                'oldImage' => $this->oldImage,
-            ], $this->categoryId);
+        $this->service->save([
+            'name' => $this->name,
+            'slug' => $this->slug,
+            'type' => $this->type,
+            'parent_id' => $this->parent_id,
+            'sort_order' => $this->sort_order,
+            'is_active' => $this->is_active,
+            'newImage' => $this->newImage,
+            'oldImage' => $this->oldImage,
+        ], $this->categoryId);
 
-            return redirect()->route('admin.category.index');
-
-        } catch (\Throwable $e) {
-            $this->addError('parent_id', $e->getMessage());
-        }
+        return redirect()->route('admin.category.index');
     }
 
     public function render()

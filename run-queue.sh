@@ -71,5 +71,6 @@ echo "
     pm2 delete laravel-queue	Xóa tiến trình \n
     pm2 logs laravel-queue	Xem log \n
     pm2 flush laravel-queue // xóa các logs \n
+    pm2 monit // xem log nodejs \n
 "
 

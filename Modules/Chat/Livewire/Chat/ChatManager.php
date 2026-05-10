@@ -4,45 +4,57 @@ namespace Modules\Chat\Livewire\Chat;
 
 use Livewire\Component;
 use Modules\Chat\Models\ChatSession;
+use Modules\Chat\Models\ChatMessage;
 use Modules\Chat\Services\ChatService;
 use Illuminate\Support\Facades\Auth;
 
 class ChatManager extends Component
 {
-    public $activeSessionId = null;
-    public $message = '';
+    public ?int $activeSessionId = null;
 
-    /**
-     * =========================
-     * REALTIME LISTENERS (LEVEL 2 CLEAN)
-     * =========================
-     */
-    public function getListeners()
-    {
-        return [
-            'refresh-chat' => '$refresh',
-            'refresh-widget' => '$refresh',
-        ];
-    }
+    public string $message = '';
+
+    public array $messages = [];
 
     /**
      * =========================
      * SELECT SESSION
      * =========================
      */
-    public function selectSession($id)
+    public function selectSession(int $sessionId): void
     {
-        $this->activeSessionId = $id;
+        $this->activeSessionId = $sessionId;
 
-        $session = ChatSession::find($id);
+        $session = ChatSession::find($sessionId);
 
-        if ($session && !$session->admin_id) {
-            $session->update([
-                'admin_id' => Auth::id(),
-            ]);
+        if (!$session) {
+            return;
         }
 
-        $this->dispatch('scroll-chat-to-bottom');
+        /**
+         * Atomic claim
+         */
+        ChatSession::where('id', $sessionId)
+            ->whereNull('admin_id')
+            ->update([
+                'admin_id' => Auth::id(),
+            ]);
+
+        /**
+         * Load latest messages
+         */
+        $this->messages = ChatMessage::query()
+            ->where('session_id', $sessionId)
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->reverse()
+            ->values()
+            ->toArray();
+
+        $this->dispatch('chat-session-selected', [
+            'sessionId' => $sessionId
+        ]);
     }
 
     /**
@@ -50,108 +62,95 @@ class ChatManager extends Component
      * SEND MESSAGE
      * =========================
      */
-    public function send(ChatService $chatService)
+    public function send(ChatService $chatService): void
     {
-        if (!$this->activeSessionId || empty(trim($this->message))) {
+        if (!$this->activeSessionId) {
             return;
         }
 
-        $chatService->sendMessage([
+        $message = trim($this->message);
+
+        if (!$message) {
+            return;
+        }
+
+        $chat = $chatService->sendMessage([
             'session_id'  => $this->activeSessionId,
             'sender_id'   => Auth::id(),
             'sender_type' => 'admin',
-            'message'     => $this->message,
+            'message'     => $message,
         ]);
+
+        /**
+         * Append local instantly
+         */
+        $this->messages[] = $chat->toArray();
 
         $this->message = '';
 
-        $this->dispatch('scroll-chat-to-bottom');
+        $this->dispatch('message-sent');
     }
 
     /**
      * =========================
-     * DELETE MESSAGE
+     * RECEIVE REALTIME MESSAGE
      * =========================
      */
-    public function delete($id, ChatService $service)
+    public function appendMessage(array $message): void
     {
-        $service->deleteMessage($id);
+        /**
+         * Prevent duplicate
+         */
+        $exists = collect($this->messages)
+            ->contains(fn ($msg) => $msg['id'] == $message['id']);
 
-        $this->dispatch('refresh-chat');
-    }
-
-    /**
-     * =========================
-     * CLEAR SESSION MESSAGES
-     * =========================
-     */
-    public function clearSessionMessages($sessionId, ChatService $service)
-    {
-        $service->deleteAllMessages($sessionId);
-
-        if ($this->activeSessionId == $sessionId) {
-            $this->dispatch('refresh-chat');
+        if ($exists) {
+            return;
         }
+
+        $this->messages[] = $message;
+
+        $this->dispatch('message-received');
     }
 
     /**
      * =========================
-     * RENDER VIEW (FINAL FIX)
+     * COMPUTED
+     * =========================
+     */
+    public function getSessionsProperty()
+    {
+        return ChatSession::query()
+            ->with([
+                'user',
+                'latestMessage',
+            ])
+            ->latest('last_message_at')
+            ->limit(30)
+            ->get();
+    }
+
+    /**
+     * =========================
+     * ACTIVE SESSION
+     * =========================
+     */
+    public function getActiveSessionProperty()
+    {
+        if (!$this->activeSessionId) {
+            return null;
+        }
+
+        return ChatSession::find($this->activeSessionId);
+    }
+
+    /**
+     * =========================
+     * RENDER
      * =========================
      */
     public function render()
     {
-        return view('Chat::livewire.chat.chat-manager', [
-            /**
-             * SESSION LIST (SIDEBAR)
-             * + eager load latest message + user
-             */
-            'sessions' => ChatSession::with([
-                    'user',
-                    'latestMessage'
-                ])
-                ->orderBy('last_message_at', 'desc')
-                ->limit(30)
-                ->get()
-                ->map(function ($session) {
-
-                    // 👉 FIX: hiển thị tên frontend chat
-                    $session->display_name = $this->resolveDisplayName($session);
-
-                    return $session;
-                }),
-
-            /**
-             * ACTIVE SESSION (CHAT WINDOW)
-             */
-            'activeSession' => $this->activeSessionId
-                ? ChatSession::with([
-                        'messages' => fn($q) => $q->orderBy('created_at', 'asc')
-                    ])
-                    ->find($this->activeSessionId)
-                : null,
-        ]);
-    }
-
-    /**
-     * =========================
-     * RESOLVE FRONTEND CHAT NAME (IMPORTANT FIX)
-     * =========================
-     */
-    private function resolveDisplayName($session): string
-    {
-        // 1. User login
-        //dd($session);
-        if ($session->user) {
-            return $session->user->name ?? 'User';
-        }
-
-        // 2. Guest chat name (frontend)
-        if (!empty($session->guest_name)) {
-            return $session->guest_name;
-        }
-
-        // 3. fallback
-        return 'Guest #' . substr($session->session_token, -5);
+        return view('Chat::livewire.chat.chat-manager');
     }
 }

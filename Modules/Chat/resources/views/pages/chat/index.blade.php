@@ -19,7 +19,9 @@
         </div>
     </div>
 
-    @livewire('chat.chat.chat-manager')
+    {{-- @livewire('chat.chat.chat-manager') --}}
+
+    @livewire('chat.chat.internal-chat-manager')
 </div>
 @endsection
 

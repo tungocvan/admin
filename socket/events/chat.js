@@ -1,104 +1,280 @@
 module.exports = (io, bridgeAuth, app) => {
     /**
-     * =========================
-     * 1. LARAVEL BRIDGE LAYER
-     * =========================
+     * =========================================================
+     * HELPERS
+     * =========================================================
      */
-    app.post("/broadcast", bridgeAuth, (req, res) => {
-        const { event, data, channel } = req.body;
+    const getRoomName = (sessionId) => {
+        return `session-${sessionId}`;
+    };
 
-        if (!event) {
-            return res.status(400).json({ error: "Missing event name" });
-        }
+    // const safeEmitToRoom = (roomName, event, payload = {}) => {
 
-        const sessionId = data?.session_id;
-        const roomName = channel || (sessionId ? `session-${sessionId}` : null);
+    //     if (!roomName) {
+    //         return;
+    //     }
 
-        console.log(`📡 EVENT: ${event} | ROOM: ${roomName || "global"}`);
+    //     const room = io.sockets.adapter.rooms.get(roomName);
 
-        if (roomName) {
-            const room = io.sockets.adapter.rooms.get(roomName);
+    //     console.log(
+    //         `📡 EMIT => EVENT: ${event} | ROOM: ${roomName} | CLIENTS: ${room ? room.size : 0}`
+    //     );
 
-            if (!room) {
-                console.warn(
-                    `⚠️ Room not found: ${roomName} (no clients joined yet)`,
-                );
+    //     io.to(roomName).emit(event, payload);
+    // };
+    function safeEmitToRoom(roomName, event, data) {
+        const room = io.sockets.adapter.rooms.get(roomName);
+
+        console.log("👥 ROOM MEMBERS:", room ? Array.from(room) : []);
+
+        console.log("📡 EMIT:", event, roomName);
+
+        io.to(roomName).emit(event, data);
+
+        console.log("✅ EMITTED");
+    }
+
+    /**
+     * =========================================================
+     * HEALTH CHECK
+     * =========================================================
+     */
+    app.get("/socket-status", (req, res) => {
+        const rooms = [];
+
+        io.sockets.adapter.rooms.forEach((clients, roomName) => {
+            /**
+             * Skip private socket rooms
+             */
+            if (!roomName.startsWith("session-")) {
+                return;
             }
 
-            io.to(roomName).emit(event, data);
-        } else {
-            io.emit(event, data);
-        }
+            rooms.push({
+                room: roomName,
+                clients: clients.size,
+            });
+        });
 
-        res.json({ ok: true });
+        res.json({
+            success: true,
+            total_clients: io.engine.clientsCount,
+            total_rooms: rooms.length,
+            rooms,
+        });
     });
 
     /**
-     * =========================
-     * 2. SOCKET REALTIME LAYER
-     * =========================
+     * =========================================================
+     * INTERNAL BRIDGE (Laravel -> Node)
+     * =========================================================
+     */
+    app.post("/broadcast", bridgeAuth, (req, res) => {
+        console.log('REQ BODY:', req.body);
+        try {
+            const { event, data = {}, channel = null } = req.body;
+
+            /**
+             * Validate
+             */
+            if (!event) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Missing event",
+                });
+            }
+
+            /**
+             * Resolve room
+             */
+            const sessionId = data.session_id || data.chat_session_id || null;
+
+            const roomName =
+                channel || (sessionId ? getRoomName(sessionId) : null);
+
+            console.log("\n==============================");
+            console.log("📨 LARAVEL BROADCAST");
+            console.log("EVENT:", event);
+            console.log("ROOM:", roomName || "GLOBAL");
+            console.log("PAYLOAD:", data);
+            console.log("==============================\n");
+
+            /**
+             * Broadcast
+             */
+            if (roomName) {
+                safeEmitToRoom(roomName, event, data);
+            } else {
+                console.log(`🌍 GLOBAL EMIT => ${event}`);
+
+                io.emit(event, data);
+            }
+
+            return res.json({
+                success: true,
+            });
+        } catch (error) {
+            console.error("❌ BROADCAST ERROR:", error);
+
+            return res.status(500).json({
+                success: false,
+                error: error.message,
+            });
+        }
+    });
+
+    /**
+     * =========================================================
+     * SOCKET CONNECTION
+     * =========================================================
      */
     io.on("connection", (socket) => {
-        console.log(`🔌 Connected: ${socket.id}`);
+        console.log(`✅ CONNECTED: ${socket.id}`);
 
         /**
-         * JOIN CHAT SESSION
+         * -----------------------------------------------------
+         * JOIN SESSION
+         * -----------------------------------------------------
          */
         socket.on("join-session", (sessionId) => {
-            if (!sessionId) return;
+            try {
+                if (!sessionId) {
+                    return;
+                }
 
-            const roomName = `session-${sessionId}`;
-            socket.join(roomName);
+                /**
+                 * Leave old room
+                 */
+                if (socket.data.sessionId) {
+                    const oldRoom = getRoomName(socket.data.sessionId);
 
-            socket.data.sessionId = sessionId;
+                    socket.leave(oldRoom);
 
-            console.log(`🚪 Joined: ${socket.id} -> ${roomName}`);
+                    console.log(`🚪 AUTO LEAVE: ${socket.id} <- ${oldRoom}`);
+                }
+
+                /**
+                 * Join new room
+                 */
+                const roomName = getRoomName(sessionId);
+
+                socket.join(roomName);
+
+                socket.data.sessionId = sessionId;
+
+                console.log(`🚪 JOINED: ${socket.id} -> ${roomName}`);
+
+                /**
+                 * Notify joined
+                 */
+                socket.emit("session-joined", {
+                    session_id: sessionId,
+                    room: roomName,
+                });
+            } catch (error) {
+                console.error("❌ JOIN SESSION ERROR:", error);
+            }
         });
 
         /**
-         * LEAVE SESSION (BEST PRACTICE ADD)
+         * -----------------------------------------------------
+         * LEAVE SESSION
+         * -----------------------------------------------------
          */
         socket.on("leave-session", (sessionId) => {
-            if (!sessionId) return;
+            try {
+                if (!sessionId) {
+                    return;
+                }
 
-            const roomName = `session-${sessionId}`;
-            socket.leave(roomName);
+                const roomName = getRoomName(sessionId);
 
-            console.log(`🚪 Left: ${socket.id} <- ${roomName}`);
+                socket.leave(roomName);
+
+                console.log(`🚪 LEFT: ${socket.id} <- ${roomName}`);
+            } catch (error) {
+                console.error("❌ LEAVE SESSION ERROR:", error);
+            }
         });
 
         /**
-         * TYPING INDICATOR (FIXED)
+         * -----------------------------------------------------
+         * TYPING
+         * -----------------------------------------------------
          */
-        socket.on("typing", (data) => {
-            if (!data?.session_id) return;
+        socket.on("typing", (data = {}) => {
+            try {
+                if (!data.session_id) {
+                    return;
+                }
 
-            const roomName = `session-${data.session_id}`;
+                const roomName = getRoomName(data.session_id);
 
-            socket.to(roomName).emit("display-typing", {
-                session_id: data.session_id,
-                user_id: data.user_id || null,
-            });
+                socket.to(roomName).emit("display-typing", {
+                    session_id: data.session_id,
+                    sender_id: data.sender_id || null,
+                });
+            } catch (error) {
+                console.error("❌ TYPING ERROR:", error);
+            }
         });
 
         /**
-         * STOP TYPING (NÊN CÓ - bổ sung chuẩn chat app)
+         * -----------------------------------------------------
+         * STOP TYPING
+         * -----------------------------------------------------
          */
-        socket.on("stop-typing", (data) => {
-            if (!data?.session_id) return;
+        socket.on("stop-typing", (data = {}) => {
+            try {
+                if (!data.session_id) {
+                    return;
+                }
 
-            const roomName = `session-${data.session_id}`;
+                const roomName = getRoomName(data.session_id);
 
-            socket.to(roomName).emit("hide-typing", {
-                session_id: data.session_id,
-            });
+                socket.to(roomName).emit("hide-typing", {
+                    session_id: data.session_id,
+                });
+            } catch (error) {
+                console.error("❌ STOP TYPING ERROR:", error);
+            }
         });
 
         /**
+         * -----------------------------------------------------
+         * MESSAGE DELIVERED
+         * -----------------------------------------------------
+         */
+        socket.on("message-delivered", (data = {}) => {
+            try {
+                if (!data.session_id) {
+                    return;
+                }
+
+                const roomName = getRoomName(data.session_id);
+
+                socket.to(roomName).emit("message-delivered", data);
+            } catch (error) {
+                console.error("❌ MESSAGE DELIVERED ERROR:", error);
+            }
+        });
+
+        /**
+         * -----------------------------------------------------
+         * SOCKET ERROR
+         * -----------------------------------------------------
+         */
+        socket.on("error", (error) => {
+            console.error(`❌ SOCKET ERROR (${socket.id}):`, error);
+        });
+
+        /**
+         * -----------------------------------------------------
          * DISCONNECT
+         * -----------------------------------------------------
          */
-        socket.on("disconnect", () => {
-            console.log(`❌ Disconnected: ${socket.id}`);
+        socket.on("disconnect", (reason) => {
+            console.log(`❌ DISCONNECTED: ${socket.id} | REASON: ${reason}`);
         });
     });
 };

@@ -8,4 +8,8 @@ Route::middleware(['web','auth:admin'])
     ->name('admin.chat.')
     ->group(function () {
         Route::get('/', [ChatController::class, 'index'])->name('index');
+        Route::view(
+            '/internal-chat',
+            'Chat::pages.chat.internal'
+        );
 }); 

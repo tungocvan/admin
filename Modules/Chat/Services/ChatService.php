@@ -39,51 +39,79 @@ class ChatService
      * =========================
      */
     public function sendMessage(array $data): ChatMessage
-    {
-        return DB::transaction(function () use ($data) {
+{
+    return DB::transaction(function () use ($data) {
 
-            $session = ChatSession::findOrFail($data['session_id']);
+        $session = ChatSession::findOrFail($data['session_id']);
+
+        /**
+         * Attach user if logged
+         */
+        if (!$session->user_id && Auth::check()) {
+            $session->update([
+                'user_id' => Auth::id()
+            ]);
+        }
+
+        /**
+         * Create message
+         */
+        $message = ChatMessage::create([
+            'chat_session_id' => $session->id,
+            'sender_id'       => $data['sender_id'] ?? Auth::id(),
+            'sender_type'     => $data['sender_type'],
+            'message'         => $data['message'],
+            'metadata'        => $data['metadata'] ?? null,
+        ]);
+
+        /**
+         * Update session
+         */
+        $session->update([
+            'last_message_at' => now(),
+            'status' => 'open',
+        ]);
+
+        /**
+         * IMPORTANT
+         * Fresh model
+         */
+        $message->refresh();
+
+        /**
+         * Broadcast realtime
+         */
+        $payload = [
+            'id' => (int) $message->id,
 
             /**
-             * 🔥 FIX SAFETY:
-             * đảm bảo session có user_id nếu user đang login
+             * FRONTEND STANDARDIZE
              */
-            if (!$session->user_id && Auth::check()) {
-                $session->update([
-                    'user_id' => Auth::id()
-                ]);
-            }
+            'session_id' => (int) $session->id,
 
-            // 1. Save message
-            $message = ChatMessage::create([
-                'chat_session_id' => $session->id,
-                'sender_id'       => $data['sender_id'] ?? Auth::id(),
-                'sender_type'     => $data['sender_type'],
-                'message'         => $data['message'],
-                'metadata'        => $data['metadata'] ?? null,
-            ]);
+            'chat_session_id' => (int) $session->id,
 
-            // 2. Update session meta
-            $session->update([
-                'last_message_at' => now(),
-                'status' => 'open'
-            ]);
+            'sender_id' => (int) $message->sender_id,
 
-            // 3. Broadcast to NodeJS
-            $this->broadcastToNodeJS([
-                'event' => 'MessageSent',
-                'data'  => [
-                    'session_id'  => (int) $session->id,
-                    'message'     => $message->message,
-                    'sender_type' => $message->sender_type,
-                    'sender_id'   => $message->sender_id,
-                    'created_at'  => $message->created_at->format('H:i'),
-                ]
-            ]);
+            'sender_type' => $message->sender_type,
 
-            return $message;
-        });
-    }
+            'message' => $message->message,
+
+            /**
+             * ISO DATE
+             */
+            'created_at' => $message->created_at->toISOString(),
+        ];
+
+        $this->broadcastToNodeJS([
+            'event' => 'MessageSent',
+            'channel' => 'session-' . $session->id,
+            'data' => $payload,
+        ]);
+
+        return $message;
+    });
+}
 
     /**
      * =========================

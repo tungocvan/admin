@@ -39,6 +39,7 @@ const bridgeAuth = (req, res, next) => {
  * 👉 chat.js sẽ handle toàn bộ socket + bridge logic
  */
 require('./events/chat')(io, bridgeAuth, app);
+require('./events/internal-chat')(io, app);
 
 /**
  * =========================
