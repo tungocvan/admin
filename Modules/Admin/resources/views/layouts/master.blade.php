@@ -26,27 +26,58 @@
     @livewireStyles
 </head>
 
+<body class="h-full bg-gray-50" x-data="{
+    sidebarOpen: window.innerWidth >= 1024,
+    isDesktop: window.innerWidth >= 1024
+}" x-init="window.addEventListener('resize', () => {
+    isDesktop = window.innerWidth >= 1024;
+    if (isDesktop) sidebarOpen = true;
+});">
 
-<body class="h-full bg-gray-50" x-data="{ sidebarOpen: true }">
     <div class="flex h-screen overflow-hidden">
-        <livewire:admin.partials.sidebar />
 
-        <div class="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
-            <livewire:admin.partials.header />
-            <main class="flex-1 overflow-auto p-6">
-                @isset($slot)
-                    {{ $slot }}
-                @else
-                    @yield('content')
-                @endisset
-            </main>
+        {{-- OVERLAY --}}
+        <div x-show="sidebarOpen && !isDesktop" x-transition.opacity @click="sidebarOpen = false"
+            class="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"></div>
+
+        {{-- SIDEBAR --}}
+        <div class="fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200
+           transition-all duration-300 ease-in-out"
+            :class="[
+                sidebarOpen ?
+                'translate-x-0 w-64' :
+                '-translate-x-full lg:translate-x-0 lg:w-20'
+            ]">
+            <livewire:admin.partials.sidebar />
         </div>
-    </div>
-    <x-toast />
-    @yield('js')
-    @stack('scripts')
-    @livewireScripts
 
+        {{-- MAIN --}}
+        <div class="flex flex-1 flex-col transition-all duration-300"
+            :class="{
+                'lg:ml-64': sidebarOpen,
+                'lg:ml-20': !sidebarOpen
+            }">
+
+            {{-- HEADER --}}
+            <livewire:admin.partials.header />
+
+            {{-- CONTENT --}}
+            <main class="flex-1 overflow-y-auto">
+                <div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+                    @isset($slot)
+                        {{ $slot }}
+                    @else
+                        @yield('content')
+                    @endisset
+                </div>
+            </main>
+
+        </div>
+
+    </div>
+
+    <x-toast />
+    @livewireScripts
 </body>
 
 </html>

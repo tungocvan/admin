@@ -4,6 +4,7 @@ namespace Modules\Auth\Livewire\Auth;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Modules\Admin\Models\Setting;
 
 class LoginForm extends Component
 {
@@ -11,10 +12,23 @@ class LoginForm extends Component
     public $password = '';
     public $remember = false;
 
+    public $logo = '';
+    public $login_name_line_1='';
+    public $login_name_line_2='';
+    public $login_description='';
+
     protected $rules = [
         'email' => 'required|email',
         'password' => 'required',
     ];
+
+    public function mount(){
+        $logo = Setting::getValue('site_logo');
+        $this->logo = $logo ? asset('storage/' . $logo) :asset('storage/img/logo.png');
+        $this->login_name_line_1 = Setting::getValue('site_name_line_1') ?? '';
+        $this->login_name_line_2 = Setting::getValue('site_name_line_2') ?? 'CÔNG TY TNHH INAFO VIỆT NAM';
+        $this->login_description = Setting::getValue('login_description') ?? 'Hệ thống quản trị';
+    }
 
     public function login()
     {

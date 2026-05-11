@@ -4,25 +4,26 @@
     <div class="text-center mb-6">
 
         {{-- LOGO --}}
+        {{-- LOGO --}}
         <div class="flex justify-center mb-4">
-            <img src="{{ asset('storage/admission/img/logo-ntd.png') }}"
-                 class="w-32 h-32 object-contain"
-                 alt="Logo Trường">
+            <img src="{{ $logo }}"
+                 class="w-128  object-contain"
+                 alt="logo">
         </div>
 
         {{-- SCHOOL NAME --}}
         <h1 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-            ỦY BAN NHÂN DÂN PHƯỜNG TÂN THUẬN
+            {{ $login_name_line_1 }}
         </h1>
 
         <h2 class="text-base font-bold text-gray-900 mt-1 leading-snug">
-            TRƯỜNG TIỂU HỌC NGUYỄN THỊ ĐỊNH
+            {{ $login_name_line_2 }}
         </h2>
 
         <div class="mt-3 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
 
         <p class="text-gray-500 text-sm mt-3">
-            Hệ thống quản trị & đăng nhập giáo viên / quản lý
+            {{ $login_description }}
         </p>
     </div>
 
