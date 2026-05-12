@@ -2,7 +2,7 @@ const onlineAdmins = new Map();
 
 module.exports = (io) => {
     io.on("connection", (socket) => {
-        console.log("✅ CONNECTED:", socket.id);
+        // console.log("✅ CONNECTED:", socket.id);
 
         /**
          * =========================================
@@ -18,7 +18,7 @@ module.exports = (io) => {
 
             io.emit("online-admins", [...onlineAdmins.keys()]);
 
-            console.log("🟢 ADMIN ONLINE:", data.user_id);
+            // console.log("🟢 ADMIN ONLINE:", data.user_id);
         });
 
         /**
@@ -39,7 +39,7 @@ module.exports = (io) => {
             if (socket.data.room) {
                 socket.leave(socket.data.room);
 
-                console.log(`🚪 LEFT: ${socket.id} <- ${socket.data.room}`);
+                // console.log(`🚪 LEFT: ${socket.id} <- ${socket.data.room}`);
             }
 
             /**
@@ -49,9 +49,9 @@ module.exports = (io) => {
 
             socket.data.room = room;
 
-            console.log(`🚪 JOINED: ${socket.id} -> ${room}`);
+            // console.log(`🚪 JOINED: ${socket.id} -> ${room}`);
 
-            console.log(socket.rooms);
+            // console.log(socket.rooms);
         });
 
         /**
@@ -68,7 +68,7 @@ module.exports = (io) => {
 
             io.emit("online-admins", [...onlineAdmins.keys()]);
 
-            console.log("❌ DISCONNECTED:", socket.id);
+            //console.log("❌ DISCONNECTED:", socket.id);
         });
     });
 };

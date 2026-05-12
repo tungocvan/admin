@@ -77,6 +77,8 @@
     </div>
 
     <x-toast />
+    @yield('js')
+    @stack('scripts')
     @livewireScripts
 </body>
 

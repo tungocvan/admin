@@ -8,30 +8,17 @@ module.exports = (io, bridgeAuth, app) => {
         return `session-${sessionId}`;
     };
 
-    // const safeEmitToRoom = (roomName, event, payload = {}) => {
-
-    //     if (!roomName) {
-    //         return;
-    //     }
-
-    //     const room = io.sockets.adapter.rooms.get(roomName);
-
-    //     console.log(
-    //         `📡 EMIT => EVENT: ${event} | ROOM: ${roomName} | CLIENTS: ${room ? room.size : 0}`
-    //     );
-
-    //     io.to(roomName).emit(event, payload);
-    // };
+  
     function safeEmitToRoom(roomName, event, data) {
         const room = io.sockets.adapter.rooms.get(roomName);
 
-        console.log("👥 ROOM MEMBERS:", room ? Array.from(room) : []);
+        // console.log("👥 ROOM MEMBERS:", room ? Array.from(room) : []);
 
-        console.log("📡 EMIT:", event, roomName);
+        // console.log("📡 EMIT:", event, roomName);
 
         io.to(roomName).emit(event, data);
 
-        console.log("✅ EMITTED");
+        //console.log("✅ EMITTED");
     }
 
     /**
@@ -70,7 +57,7 @@ module.exports = (io, bridgeAuth, app) => {
      * =========================================================
      */
     app.post("/broadcast", bridgeAuth, (req, res) => {
-        console.log('REQ BODY:', req.body);
+       // console.log('REQ BODY:', req.body);
         try {
             const { event, data = {}, channel = null } = req.body;
 
@@ -92,12 +79,12 @@ module.exports = (io, bridgeAuth, app) => {
             const roomName =
                 channel || (sessionId ? getRoomName(sessionId) : null);
 
-            console.log("\n==============================");
-            console.log("📨 LARAVEL BROADCAST");
-            console.log("EVENT:", event);
-            console.log("ROOM:", roomName || "GLOBAL");
-            console.log("PAYLOAD:", data);
-            console.log("==============================\n");
+            // console.log("\n==============================");
+            // console.log("📨 LARAVEL BROADCAST");
+            // console.log("EVENT:", event);
+            // console.log("ROOM:", roomName || "GLOBAL");
+            // console.log("PAYLOAD:", data);
+            // console.log("==============================\n");
 
             /**
              * Broadcast
