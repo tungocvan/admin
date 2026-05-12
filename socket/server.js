@@ -40,6 +40,11 @@ const bridgeAuth = (req, res, next) => {
  */
 require('./events/chat')(io, bridgeAuth, app);
 require('./events/internal-chat')(io);
+// require('./events/guest-chat')(
+//     io,
+//     bridgeAuth,
+//     app
+// );
 
 /**
  * =========================

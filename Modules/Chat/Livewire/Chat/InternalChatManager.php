@@ -116,25 +116,50 @@ class InternalChatManager extends Component
      * REALTIME APPEND MESSAGE
      * =====================================================
      */
-    public function appendMessage($message): void
-    {
-        logger()->info('DEBUG MESSAGE', [
-            'type' => gettype($message),
-            'data' => $message,
-        ]);
+    public function appendMessage(
+        $message
+    ): void {
 
         if (is_string($message)) {
-            $message = json_decode($message, true);
+
+            $message = json_decode(
+                $message,
+                true
+            );
         }
 
         if (!is_array($message)) {
             return;
         }
 
+
+        /**
+         * Duplicate prevent
+         */
+        $exists = collect($this->messages)
+            ->contains(
+                fn($msg)
+                    =>
+                    $msg['id']
+                    ==
+                    $message['id']
+            );
+
+        if ($exists) {
+            return;
+        }
+
+        /**
+         * Append realtime
+         */
         $this->messages[] = $message;
 
+        /**
+         * Scroll
+         */
         $this->dispatch('scroll-bottom');
     }
+
     /**
      * =====================================================
      * ONLINE USERS

@@ -75,7 +75,7 @@
         </div>
 
     </div>
-
+ 
     <x-toast />
     @yield('js')
     @stack('scripts')

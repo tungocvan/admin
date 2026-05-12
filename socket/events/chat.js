@@ -62,7 +62,7 @@ module.exports = (io, bridgeAuth, app) => {
             const { event, data = {}, channel = null } = req.body;
 
             /**
-             * Validate
+             * Validate 
              */
             if (!event) {
                 return res.status(400).json({

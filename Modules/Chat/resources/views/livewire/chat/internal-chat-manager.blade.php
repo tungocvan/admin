@@ -29,15 +29,10 @@
                         class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600
                                flex items-center justify-center text-white shadow-lg">
 
-                        <svg xmlns="http://www.w3.org/2000/svg"
-                            class="w-5 h-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
 
-                            <path stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="1.8"
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                                 d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4v-4z" />
                         </svg>
                     </div>
@@ -49,8 +44,7 @@
 
                     <div class="relative">
 
-                        <input type="text"
-                            placeholder="Search admin..."
+                        <input type="text" placeholder="Search admin..."
                             class="w-full rounded-2xl border border-zinc-200 dark:border-zinc-700
                                    bg-white dark:bg-zinc-800
                                    px-4 py-3 pl-11 text-sm
@@ -60,14 +54,10 @@
                                    focus:ring-blue-500/10 outline-none transition">
 
                         <svg xmlns="http://www.w3.org/2000/svg"
-                            class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor">
+                            class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
 
-                            <path stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
                         </svg>
 
@@ -81,21 +71,15 @@
             <div class="flex-1 overflow-y-auto">
 
                 @forelse($users as $user)
-
                     @php
                         $active = $selectedUserId == $user->id;
                     @endphp
 
-                    <button
-                        wire:click="selectUser({{ $user->id }})"
-                        wire:key="user-{{ $user->id }}"
+                    <button wire:click="selectUser({{ $user->id }})" wire:key="user-{{ $user->id }}"
                         class="w-full px-4 py-4 transition-all duration-200
                                border-b border-zinc-100 dark:border-zinc-800/70
                                hover:bg-white dark:hover:bg-zinc-900
-                               {{ $active
-                                   ? 'bg-white dark:bg-zinc-900'
-                                   : ''
-                               }}">
+                               {{ $active ? 'bg-white dark:bg-zinc-900' : '' }}">
 
                         <div class="flex items-center gap-3">
 
@@ -134,8 +118,7 @@
 
                                     </div>
 
-                                    <div
-                                        class="text-[11px] text-zinc-400 shrink-0">
+                                    <div class="text-[11px] text-zinc-400 shrink-0">
 
                                         now
 
@@ -143,8 +126,7 @@
 
                                 </div>
 
-                                <div
-                                    class="mt-1 flex items-center justify-between gap-2">
+                                <div class="mt-1 flex items-center justify-between gap-2">
 
                                     <div
                                         class="text-xs truncate
@@ -175,36 +157,28 @@
 
                 @empty
 
-                    <div
-                        class="h-full flex flex-col items-center justify-center p-10">
+                    <div class="h-full flex flex-col items-center justify-center p-10">
 
                         <div
                             class="w-16 h-16 rounded-3xl bg-zinc-100 dark:bg-zinc-800
                                    flex items-center justify-center">
 
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                class="w-8 h-8 text-zinc-400"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-zinc-400" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
 
-                                <path stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="1.5"
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                     d="M17 20h5V4H2v16h5m10 0v-4a3 3 0 00-3-3H10a3 3 0 00-3 3v4m10 0H7" />
                             </svg>
 
                         </div>
 
-                        <div
-                            class="mt-5 text-sm text-zinc-500 text-center">
+                        <div class="mt-5 text-sm text-zinc-500 text-center">
 
                             Không có admin online
 
                         </div>
 
                     </div>
-
                 @endforelse
 
             </div>
@@ -249,15 +223,13 @@
 
                         <div>
 
-                            <div
-                                class="font-semibold text-zinc-900 dark:text-white">
+                            <div class="font-semibold text-zinc-900 dark:text-white">
 
                                 {{ $selectedUser?->name }}
 
                             </div>
 
-                            <div
-                                class="text-xs text-emerald-500 mt-0.5">
+                            <div class="text-xs text-emerald-500 mt-0.5">
 
                                 Online now
 
@@ -275,15 +247,10 @@
                                    hover:bg-zinc-100 dark:hover:bg-zinc-800
                                    flex items-center justify-center transition">
 
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                class="w-5 h-5 text-zinc-500"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-zinc-500" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
 
-                                <path stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="1.8"
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
                                     d="M15 10l4.553-4.553a1 1 0 00-1.414-1.414L13.586 8.586m0 0L10 12.172m3.586-3.586L10 5m3.586 3.586L17 12" />
                             </svg>
 
@@ -301,24 +268,20 @@
                            space-y-5">
 
                     @foreach ($messages as $msg)
-
                         @php
                             $isMine = $msg['from_id'] == auth('admin')->id();
                         @endphp
 
-                        <div
-                            class="flex {{ $isMine ? 'justify-end' : 'justify-start' }}">
+                        <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }}">
 
-                            <div
-                                class="max-w-[78%] lg:max-w-[65%]">
+                            <div class="max-w-[78%] lg:max-w-[65%]">
 
                                 {{-- MESSAGE --}}
                                 <div
                                     class="px-5 py-3 rounded-3xl text-sm leading-relaxed shadow-sm
                                     {{ $isMine
                                         ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-md'
-                                        : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 rounded-bl-md'
-                                    }}">
+                                        : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 rounded-bl-md' }}">
 
                                     {{ $msg['message'] }}
 
@@ -328,21 +291,16 @@
                                 <div
                                     class="mt-2 px-1 flex items-center gap-2
                                            text-[11px]
-                                           {{ $isMine
-                                               ? 'justify-end text-zinc-400'
-                                               : 'justify-start text-zinc-400'
-                                           }}">
+                                           {{ $isMine ? 'justify-end text-zinc-400' : 'justify-start text-zinc-400' }}">
 
                                     <span>
                                         {{ \Carbon\Carbon::parse($msg['created_at'])->format('H:i') }}
                                     </span>
 
                                     @if ($isMine)
-
                                         <span class="text-blue-500">
                                             ✓✓
                                         </span>
-
                                     @endif
 
                                 </div>
@@ -350,7 +308,6 @@
                             </div>
 
                         </div>
-
                     @endforeach
 
                     {{-- TYPING --}}
@@ -364,8 +321,7 @@
 
                             <div class="flex items-center gap-1">
 
-                                <span
-                                    class="w-2 h-2 rounded-full bg-zinc-400 animate-bounce"></span>
+                                <span class="w-2 h-2 rounded-full bg-zinc-400 animate-bounce"></span>
 
                                 <span
                                     class="w-2 h-2 rounded-full bg-zinc-400 animate-bounce [animation-delay:0.15s]"></span>
@@ -387,15 +343,12 @@
                            bg-white/90 dark:bg-zinc-900/90
                            backdrop-blur-xl p-5">
 
-                    <form wire:submit.prevent="send"
-                        class="flex items-end gap-3">
+                    <form wire:submit.prevent="send" class="flex items-end gap-3">
 
                         {{-- INPUT --}}
                         <div class="flex-1 relative">
 
-                            <input type="text"
-                                wire:model="message"
-                                placeholder="Nhập tin nhắn..."
+                            <input type="text" wire:model="message" placeholder="Nhập tin nhắn..."
                                 class="w-full rounded-2xl border border-zinc-200
                                        dark:border-zinc-700
                                        bg-zinc-50 dark:bg-zinc-800
@@ -434,9 +387,7 @@
                     </form>
 
                 </div>
-
             @else
-
                 {{-- EMPTY --}}
                 <div
                     class="flex-1 flex items-center justify-center
@@ -453,15 +404,10 @@
                                    mx-auto flex items-center justify-center
                                    shadow-2xl shadow-blue-500/20">
 
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                class="w-11 h-11 text-white"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-11 h-11 text-white" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
 
-                                <path stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="1.6"
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
                                     d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4-.8L3 20l1.2-3.2A7.965 7.965 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
 
@@ -475,8 +421,7 @@
 
                         </h3>
 
-                        <p
-                            class="mt-2 text-sm text-zinc-500 max-w-sm">
+                        <p class="mt-2 text-sm text-zinc-500 max-w-sm">
 
                             Chọn một admin bên trái để bắt đầu cuộc trò chuyện realtime.
 
@@ -495,135 +440,113 @@
 </div>
 @push('scripts')
     <script>
-        document.addEventListener('livewire:init', () => {
-
-            /**
-             * =========================================
-             * AUTH ADMIN ID
-             * =========================================
-             */
-            const authId = @json(auth('admin')->id());
-
-            /**
-             * =========================================
-             * ONLINE STATUS
-             * =========================================
-             */
-            window.socket.emit('admin-online', {
-                user_id: authId,
-            });
-
-            console.log('🟢 ADMIN ONLINE:', authId);
-
-            /**
-             * =========================================
-             * RECEIVE ONLINE ADMINS
-             * =========================================
-             */
-            window.socket.on('online-admins', (users) => {
-
-                console.log('👥 ONLINE ADMINS:', users);
-
-                Livewire.dispatch('setOnlineUsers', {
-                    users: users,
-                });
-            });
-
-            /**
-             * =========================================
-             * JOIN ROOM (LIVEWIRE 3 FIX)
-             * =========================================
-             */
-            Livewire.on('join-room', (event) => {
-
-                console.log(
-                    '🚪 JOIN ROOM:',
-                    event.room
-                );
-
-                window.socket.emit('join-dm-room', {
-                    room: String(event.room).trim(),
-                });
-            });
-
-            /**
-             * =========================================
-             * RECEIVE REALTIME MESSAGE
-             * =========================================
-             */
-            window.socket.on('InternalMessageSent', (message) => {
-
-                console.log(
-                    '📨 RECEIVED MESSAGE:',
-                    message
-                );
+        document.addEventListener(
+            'livewire:init',
+            () => {
 
                 /**
-                 * Dispatch to Livewire
+                 * =====================================
+                 * PREVENT DUPLICATE
+                 * =====================================
                  */
-                Livewire.dispatch('appendMessage', {
-                    message: message
-                });
+                if (
+                    window.internalChatInitialized
+                ) {
+                    return;
+                }
+
+                window.internalChatInitialized =
+                    true;
 
                 /**
-                 * Scroll bottom
+                 * =====================================
+                 * AUTH ID
+                 * =====================================
                  */
-                scrollBottom();
-            });
+                const authId =
+                    @json(auth('admin')->id());
 
-            /**
-             * =========================================
-             * DEBUG ALL SOCKET EVENTS
-             * =========================================
-             */
-            window.socket.onAny((event, data) => {
-
-                console.log(
-                    '📡 SOCKET EVENT:',
-                    event,
-                    data
-                );
-            });
-
-            /**
-             * =========================================
-             * SCROLL CHAT
-             * =========================================
-             */
-            function scrollBottom() {
-
-                setTimeout(() => {
-
-                    const chatWindow =
-                        document.getElementById('chat-window');
-
-                    if (chatWindow) {
-
-                        chatWindow.scrollTop =
-                            chatWindow.scrollHeight;
+                /**
+                 * =====================================
+                 * ADMIN ONLINE
+                 * =====================================
+                 */
+                window.socket.emit(
+                    'admin-online', {
+                        user_id: authId,
                     }
+                );
 
-                }, 80);
+                /**
+                 * =====================================
+                 * ONLINE ADMINS
+                 * =====================================
+                 */
+                window.socket.off(
+                    'online-admins'
+                );
+
+                window.socket.on(
+                    'online-admins',
+                    (users) => {
+
+                        Livewire.dispatch(
+                            'setOnlineUsers', {
+                                users: users,
+                            }
+                        );
+                    }
+                );
+
+                /**
+                 * =====================================
+                 * JOIN ROOM
+                 * =====================================
+                 */
+                Livewire.on(
+                    'join-room',
+                    (event) => {
+
+                        window.socket.emit(
+                            'join-dm-room', {
+                                room: String(
+                                    event.room
+                                ).trim(),
+                            }
+                        );
+                    }
+                );
+
+                /**
+                 * =====================================
+                 * REALTIME MESSAGE
+                 * =====================================
+                 */
+                window.socket.off(
+                    'InternalMessageSent'
+                );
+
+                window.socket.on(
+                    'InternalMessageSent',
+                    (message) => {
+
+                        console.log(
+                            '📨 REALTIME:',
+                            message
+                        );
+
+                        Livewire.dispatch(
+                            'appendMessage', {
+                                message: message
+                            }
+                        );
+                    }
+                );
+
+                console.log(
+                    '✅ INTERNAL CHAT READY'
+                );
             }
-
-            /**
-             * =========================================
-             * LIVEWIRE SCROLL EVENT
-             * =========================================
-             */
-            Livewire.on('scroll-bottom', () => {
-
-                scrollBottom();
-            });
-
-            /**
-             * =========================================
-             * INIT
-             * =========================================
-             */
-            scrollBottom();
-
-            console.log('✅ INTERNAL CHAT READY');
-        });
+        );
     </script>
 @endpush

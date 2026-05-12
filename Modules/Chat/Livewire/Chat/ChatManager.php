@@ -16,13 +16,19 @@ class ChatManager extends Component
 
     public array $messages = [];
 
+    protected $listeners = [
+        'appendMessage',
+    ];
+
     /**
-     * =========================
+     * =========================================
      * SELECT SESSION
-     * =========================
+     * =========================================
      */
-    public function selectSession(int $sessionId): void
-    {
+    public function selectSession(
+        int $sessionId
+    ): void {
+
         $this->activeSessionId = $sessionId;
 
         $session = ChatSession::find($sessionId);
@@ -32,19 +38,23 @@ class ChatManager extends Component
         }
 
         /**
-         * Atomic claim
+         * Claim admin
          */
-        ChatSession::where('id', $sessionId)
+        ChatSession::query()
+            ->where('id', $sessionId)
             ->whereNull('admin_id')
             ->update([
                 'admin_id' => Auth::id(),
             ]);
 
         /**
-         * Load latest messages
+         * Load messages
          */
         $this->messages = ChatMessage::query()
-            ->where('session_id', $sessionId)
+            ->where(
+                'chat_session_id',
+                $sessionId
+            )
             ->latest()
             ->limit(50)
             ->get()
@@ -52,18 +62,29 @@ class ChatManager extends Component
             ->values()
             ->toArray();
 
-        $this->dispatch('chat-session-selected', [
-            'sessionId' => $sessionId
-        ]);
+        /**
+         * Join realtime room
+         */
+        $this->dispatch(
+            'chat-session-selected',
+            sessionId: $sessionId
+        );
+
+        /**
+         * Scroll
+         */
+        $this->dispatch('scroll-bottom');
     }
 
     /**
-     * =========================
+     * =========================================
      * SEND MESSAGE
-     * =========================
+     * =========================================
      */
-    public function send(ChatService $chatService): void
-    {
+    public function send(
+        ChatService $chatService
+    ): void {
+
         if (!$this->activeSessionId) {
             return;
         }
@@ -74,66 +95,121 @@ class ChatManager extends Component
             return;
         }
 
+        /**
+         * Save message
+         */
         $chat = $chatService->sendMessage([
-            'session_id'  => $this->activeSessionId,
-            'sender_id'   => Auth::id(),
+
+            'chat_session_id' => $this->activeSessionId,
+
+            'sender_id' => Auth::id(),
+
             'sender_type' => 'admin',
-            'message'     => $message,
+
+            'message' => $message,
+
         ]);
 
         /**
-         * Append local instantly
+         * Local append
          */
         $this->messages[] = $chat->toArray();
 
-        $this->message = '';
+        /**
+         * Reset input
+         */
+        $this->reset('message');
 
-        $this->dispatch('message-sent');
+        /**
+         * Scroll
+         */
+        $this->dispatch('scroll-bottom');
     }
 
     /**
-     * =========================
-     * RECEIVE REALTIME MESSAGE
-     * =========================
+     * =========================================
+     * REALTIME APPEND
+     * =========================================
      */
-    public function appendMessage(array $message): void
-    {
+    public function appendMessage(
+        $message
+    ): void {
+
+        if (is_string($message)) {
+
+            $message = json_decode(
+                $message,
+                true
+            );
+        }
+
+        if (!is_array($message)) {
+            return;
+        }
+
         /**
-         * Prevent duplicate
+         * Wrong room
+         */
+        if (
+            (int) $message['chat_session_id']
+            !==
+            $this->activeSessionId
+        ) {
+            return;
+        }
+
+        /**
+         * Duplicate prevent
          */
         $exists = collect($this->messages)
-            ->contains(fn ($msg) => $msg['id'] == $message['id']);
+            ->contains(
+                fn($msg)
+                    =>
+                    $msg['id']
+                    ==
+                    $message['id']
+            );
 
         if ($exists) {
             return;
         }
 
+        /**
+         * Append realtime
+         */
         $this->messages[] = $message;
 
-        $this->dispatch('message-received');
+        /**
+         * Scroll
+         */
+        $this->dispatch('scroll-bottom');
     }
 
     /**
-     * =========================
-     * COMPUTED
-     * =========================
+     * =========================================
+     * COMPUTED SESSIONS
+     * =========================================
      */
     public function getSessionsProperty()
     {
         return ChatSession::query()
+
             ->with([
                 'user',
                 'latestMessage',
             ])
+
             ->latest('last_message_at')
+
             ->limit(30)
+
             ->get();
     }
 
     /**
-     * =========================
+     * =========================================
      * ACTIVE SESSION
-     * =========================
+     * =========================================
      */
     public function getActiveSessionProperty()
     {
@@ -141,16 +217,20 @@ class ChatManager extends Component
             return null;
         }
 
-        return ChatSession::find($this->activeSessionId);
+        return ChatSession::find(
+            $this->activeSessionId
+        );
     }
 
     /**
-     * =========================
+     * =========================================
      * RENDER
-     * =========================
+     * =========================================
      */
     public function render()
     {
-        return view('Chat::livewire.chat.chat-manager');
+        return view(
+            'Chat::livewire.chat.chat-manager'
+        );
     }
 }

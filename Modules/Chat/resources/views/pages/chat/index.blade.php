@@ -1,5 +1,5 @@
 @extends('Admin::layouts.master')
-
+ 
 @section('title', 'Quản lý Chat Realtime')
 
 @section('content')

@@ -39,79 +39,119 @@ class ChatService
      * =========================
      */
     public function sendMessage(array $data): ChatMessage
-{
-    return DB::transaction(function () use ($data) {
+    {
+        return DB::transaction(function () use ($data) {
 
-        $session = ChatSession::findOrFail($data['session_id']);
+            /**
+             * Normalize key
+             */
+            $sessionId =
+                $data['chat_session_id']
+                ??
+                $data['session_id']
+                ??
+                null;
 
-        /**
-         * Attach user if logged
-         */
-        if (!$session->user_id && Auth::check()) {
-            $session->update([
-                'user_id' => Auth::id()
+            if (!$sessionId) {
+
+                throw new \Exception(
+                    'Missing session id'
+                );
+            }
+
+            /**
+             * Session
+             */
+            $session = ChatSession::findOrFail(
+                $sessionId
+            );
+
+            /**
+             * Attach user if logged
+             */
+            if (
+                !$session->user_id
+                &&
+                Auth::check()
+            ) {
+                $session->update([
+                    'user_id' => Auth::id(),
+                ]);
+            }
+
+            /**
+             * Create message
+             */
+            $message = ChatMessage::create([
+
+                'chat_session_id' => $session->id,
+
+                'sender_id' => $data['sender_id']
+                    ?? Auth::id(),
+
+                'sender_type' => $data['sender_type']
+                    ?? 'guest',
+
+                'message' => $data['message'] ?? '',
+
+                'metadata' => $data['metadata']
+                    ?? null,
+
             ]);
-        }
-
-        /**
-         * Create message
-         */
-        $message = ChatMessage::create([
-            'chat_session_id' => $session->id,
-            'sender_id'       => $data['sender_id'] ?? Auth::id(),
-            'sender_type'     => $data['sender_type'],
-            'message'         => $data['message'],
-            'metadata'        => $data['metadata'] ?? null,
-        ]);
-
-        /**
-         * Update session
-         */
-        $session->update([
-            'last_message_at' => now(),
-            'status' => 'open',
-        ]);
-
-        /**
-         * IMPORTANT
-         * Fresh model
-         */
-        $message->refresh();
-
-        /**
-         * Broadcast realtime
-         */
-        $payload = [
-            'id' => (int) $message->id,
 
             /**
-             * FRONTEND STANDARDIZE
+             * Update session
              */
-            'session_id' => (int) $session->id,
+            $session->update([
 
-            'chat_session_id' => (int) $session->id,
+                'last_message_at' => now(),
 
-            'sender_id' => (int) $message->sender_id,
+                'status' => 'open',
 
-            'sender_type' => $message->sender_type,
-
-            'message' => $message->message,
+            ]);
 
             /**
-             * ISO DATE
+             * Fresh
              */
-            'created_at' => $message->created_at->toISOString(),
-        ];
+            $message->refresh();
 
-        $this->broadcastToNodeJS([
-            'event' => 'MessageSent',
-            'channel' => 'session-' . $session->id,
-            'data' => $payload,
-        ]);
+            /**
+             * Payload
+             */
+            $payload = [
 
-        return $message;
-    });
-}
+                'id' => (int) $message->id,
+
+                'chat_session_id' => (int) $session->id,
+
+                'sender_id' => (int) $message->sender_id,
+
+                'sender_type' => $message->sender_type,
+
+                'message' => $message->message,
+
+                'created_at' => $message
+                    ->created_at
+                    ->toISOString(),
+
+            ];
+
+            /**
+             * Broadcast realtime
+             */
+            $this->broadcastToNodeJS([
+
+                'event' => 'MessageSent',
+
+                'channel' => 'session-' . $session->id,
+
+                'data' => $payload,
+
+            ]);
+
+            return $message;
+        });
+    }
 
     /**
      * =========================
@@ -172,15 +212,14 @@ class ChatService
     {
         try {
             $url = config('services.nodejs.url', env('NODEJS_SERVER_URL', 'http://127.0.0.1:6001'))
-                 . '/broadcast';
+                . '/broadcast';
 
             Http::withHeaders([
                 'X-Bridge-Secret' => env('BRIDGE_SECRET_KEY'),
                 'Content-Type'    => 'application/json',
             ])
-            ->timeout(2)
-            ->post($url, $payload);
-
+                ->timeout(2)
+                ->post($url, $payload);
         } catch (\Throwable $e) {
             Log::error("❌ Node Bridge Failed: " . $e->getMessage());
         }

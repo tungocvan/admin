@@ -1,6 +1,6 @@
 <?php
 
-//use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Route;
 //use Modules\Website\Http\Controllers\AuthController;
 
 
@@ -24,3 +24,7 @@
 // Route::middleware(['web'])->get('/template', function () {
 //         return view('template');
 // })->name('template');
+
+Route::middleware(['web'])->get('/', function () {
+        return view('welcome');
+});
