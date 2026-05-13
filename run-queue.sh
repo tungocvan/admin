@@ -3,7 +3,7 @@
 set -e  # nếu có lỗi -> dừng luôn (tránh deploy nửa chừng)
 
 CURRENT_DIR=$(basename "$PWD")
-APP_NAME="laravel-queue-$CURRENT_DIR"
+APP_NAME="$CURRENT_DIR-queue-laravel"
 
 echo "🚀 Starting deploy..."
 

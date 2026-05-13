@@ -85,12 +85,21 @@ class ChatManager extends Component
         ChatService $chatService
     ): void {
 
+        /**
+         * No active session
+         */
         if (!$this->activeSessionId) {
             return;
         }
 
+        /**
+         * Clean message
+         */
         $message = trim($this->message);
 
+        /**
+         * Empty message
+         */
         if (!$message) {
             return;
         }
@@ -111,9 +120,12 @@ class ChatManager extends Component
         ]);
 
         /**
-         * Local append
+         * IMPORTANT:
+         * Do NOT append local message
+         *
+         * Realtime event will append automatically
+         * via Echo -> appendMessage()
          */
-        $this->messages[] = $chat->toArray();
 
         /**
          * Reset input
@@ -121,9 +133,11 @@ class ChatManager extends Component
         $this->reset('message');
 
         /**
-         * Scroll
+         * Scroll bottom
          */
-        $this->dispatch('scroll-bottom');
+        $this->dispatch(
+            'scroll-bottom'
+        );
     }
 
     /**
@@ -164,8 +178,8 @@ class ChatManager extends Component
         $exists = collect($this->messages)
             ->contains(
                 fn($msg)
-                    =>
-                    $msg['id']
+                =>
+                $msg['id']
                     ==
                     $message['id']
             );
