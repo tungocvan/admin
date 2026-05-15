@@ -13,6 +13,11 @@ class ChatWidget extends Component
     public $step = 'auth'; // auth, chat
     public $message = '';
     public $sessionToken;
+    public $sessionId = null;
+    public $activeSessionId = null;
+
+    
+    
 
     public function getListeners()
     {
@@ -30,6 +35,7 @@ class ChatWidget extends Component
         if (Auth::check()) {
             $this->step = 'chat';
             $this->sessionToken = 'user_' . Auth::id();
+            dd($this->sessionToken);
         } else {
             // Cấp token định danh cho Guest
             $this->sessionToken = session()->get('chat_token', Str::random(32));
@@ -37,26 +43,54 @@ class ChatWidget extends Component
 
             // Kiểm tra nếu Guest này đã có phiên chat cũ chưa kết thúc
             $exists = ChatSession::where('session_token', $this->sessionToken)->exists();
-            if ($exists) { $this->step = 'chat'; }
+            if ($exists) { $this->step = 'chat';
+            //dd($this->sessionToken, $exists);
+           }
         }
+    }
+
+    public function appendMessage($newMessage)
+    {
+        // Ép mảng thành Object (stdClass) để Blade đọc mượt hơn nếu cần
+        $msgObject = (object) $newMessage;
+        
+        // Nếu thiếu thời gian, tự bổ sung
+        if (!isset($msgObject->created_at)) {
+            $msgObject->created_at = now();
+        }
+
+        $this->messages[] = $msgObject;
+        
+        // Phát sự kiện cuộn chuột xuống
+        $this->dispatch('scroll-bottom');
     }
 
     public function handleIncoming($data)
     {
         // Chỉ refresh nếu tin nhắn thuộc về chính khách hàng này
         $session = ChatSession::where('session_token', $this->sessionToken)->first();
+        
         if ($session && isset($data['session_id']) && $data['session_id'] == $session->id) {
             $this->dispatch('refresh-widget');
             $this->dispatch('scroll-bottom');
         }
     }
 
+    // public function startChat(ChatService $chatService)
+    // {
+    //     // Khởi tạo session thông qua Service
+    //     $chatService->getOrCreateSession($this->sessionToken);
+    //     $this->step = 'chat';
+    //     $this->dispatch('scroll-bottom'); 
+    // }
+
     public function startChat(ChatService $chatService)
     {
-        // Khởi tạo session thông qua Service
-        $chatService->getOrCreateSession($this->sessionToken);
+        $session = $chatService->getOrCreateSession($this->sessionToken);
+        $this->sessionId = $session->id; // Gán ID tại đây
         $this->step = 'chat';
-        $this->dispatch('scroll-bottom');
+        $this->dispatch('scroll-bottom'); 
+        
     }
 
     public function send(ChatService $chatService)
@@ -64,13 +98,14 @@ class ChatWidget extends Component
         if (empty(trim($this->message))) return;
 
         $session = $chatService->getOrCreateSession($this->sessionToken);
-
-        $chatService->sendMessage([
+        $infoChat =[
             'session_id'   => $session->id,
             'sender_id'    => Auth::id(),
             'sender_type'  => Auth::check() ? 'user' : 'guest',
             'message'      => $this->message,
-        ]);
+        ];
+       // dd($infoChat); // 'sender_id' == null nếu là guest
+        $chatService->sendMessage($infoChat);
 
         $this->message = '';
         $this->dispatch('scroll-bottom');

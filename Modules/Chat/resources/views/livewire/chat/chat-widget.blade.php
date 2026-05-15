@@ -1,22 +1,22 @@
 <div x-data="chatWidget()" x-init="init()" class="fixed bottom-6 right-6 z-[9999]">
 
     {{-- TOGGLE --}}
-    <button @click="open = !open"
+    <button @click="isChatOpen = !isChatOpen"
         class="group flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-600 shadow-2xl shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all text-white">
 
-        <svg x-show="!open" class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg x-show="!isChatOpen" class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
         </svg>
 
-        <svg x-show="open" x-cloak class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg x-show="isChatOpen" x-cloak class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
 
     </button>
 
     {{-- CHAT BOX --}}
-    <div x-show="open" x-cloak x-transition:enter="transition duration-300 ease-out"
+    <div x-show="isChatOpen" x-cloak x-transition:enter="transition duration-300 ease-out"
         x-transition:enter-start="opacity-0 translate-y-4 scale-95"
         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
         class="fixed
@@ -110,30 +110,47 @@
             {{-- MESSAGES --}}
             <div id="chat-content" class="flex-1 overflow-y-auto px-5 py-6 bg-gray-50 space-y-5">
 
-                @foreach ($messages as $msg)
+                @foreach ($messages as $index => $msg)
                     @php
-                        $isMine = $msg->sender_type !== 'admin';
+                        // Hỗ trợ cả Object Eloquent lẫn mảng thuần Array
+                        $senderType = is_object($msg) ? $msg->sender_type : $msg['sender_type'] ?? '';
+                        $messageContent = is_object($msg) ? $msg->message : $msg['message'] ?? ($msg['content'] ?? '');
+                        $msgId = is_object($msg) ? $msg->id : $msg['id'] ?? $index;
+
+                        // Xử lý an toàn cho thời gian
+                        if (is_object($msg) && isset($msg->created_at)) {
+                            $time = $msg->created_at->format('H:i');
+                        } else {
+                            $createdAt = $msg['created_at'] ?? now();
+                            $time =
+                                $createdAt instanceof \Carbon\Carbon
+                                    ? $createdAt->format('H:i')
+                                    : date('H:i', strtotime($createdAt));
+                        }
+
+                        // Đảo ngược lại logic nếu đây là màn hình Admin (Bạn đang check !== 'admin' nghĩa là mine)
+                        $isMine = $senderType !== 'admin';
                     @endphp
 
-                    <div wire:key="msg-{{ $msg->id }}"
+                    <div wire:key="msg-{{ $msgId }}"
                         class="flex {{ $isMine ? 'justify-end' : 'justify-start' }}">
 
                         <div class="max-w-[80%]">
 
                             <div
                                 class="px-4 py-3 rounded-3xl text-sm leading-relaxed shadow-sm
-                                {{ $isMine
-                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-md'
-                                    : 'bg-white border border-gray-100 text-gray-700 rounded-bl-md' }}">
+                {{ $isMine
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-md'
+                    : 'bg-white border border-gray-100 text-gray-700 rounded-bl-md' }}">
 
-                                {{ $msg->message }}
+                                {{ $messageContent }}
 
                             </div>
 
                             <div
                                 class="mt-1 px-1 text-[11px] text-gray-400
-                                {{ $isMine ? 'text-right' : 'text-left' }}">
-                                {{ $msg->created_at->format('H:i') }}
+                {{ $isMine ? 'text-right' : 'text-left' }}">
+                                {{ $time }}
                             </div>
 
                         </div>
@@ -142,7 +159,7 @@
                 @endforeach
 
                 {{-- TYPING --}}
-                <div x-show="typing" x-transition class="flex justify-start">
+                <div x-show="isTyping" x-transition class="flex justify-start">
 
                     <div class="bg-white border border-gray-100 px-4 py-3 rounded-3xl rounded-bl-md shadow-sm">
 
@@ -194,132 +211,248 @@
 
 @push('scripts')
     <script>
-        function chatWidget() {
+function chatWidget() {
 
-            return {
+    return {
 
-                open: @entangle('isOpen'),
+        isChatOpen:false,
 
-                typing: false,
+        isTyping:false,
 
-                typingTimeout: null,
+        typingTimeout:null,
 
-                init() {
+        activeSessionId:@entangle(
+            'activeSessionId'
+        ),
 
-                    /**
-                     * Scroll helper
-                     */
-                    const scrollBottom = () => {
+        initialized:false,
 
-                        setTimeout(() => {
+        init(){
 
-                            const el =
-                                document.getElementById(
-                                    'chat-content'
-                                );
+            if(
+                this.initialized
+            ){
+                return;
+            }
 
-                            if (!el) {
-                                return;
-                            }
+            this.initialized=true;
 
-                            el.scrollTop =
-                                el.scrollHeight;
+            console.log(
+                '✅ chat init'
+            );
 
-                        }, 80);
-                    };
+            /**
+             * scroll
+             */
+            Livewire.on(
+                'scroll-bottom',
+                ()=>{
 
-                    /**
-                     * INIT
-                     */
-                    scrollBottom();
+                    this.scrollBottom();
+                }
+            );
 
-                    /**
-                     * LIVEWIRE SCROLL
-                     */
-                    Livewire.on(
-                        'scroll-bottom',
-                        () => {
+            /**
+             * join room
+             */
+            window.addEventListener(
+                'chat-session-selected',
+                (event)=>{
 
-                            scrollBottom();
-                        }
+                    let sessionId=
+                        event.detail
+                        .sessionId;
+
+                    console.log(
+                        '🚪 join',
+                        sessionId
                     );
 
-                    /**
-                     * =====================================
-                     * REALTIME MESSAGE
-                     * =====================================
-                     */
-                    window.socket.off(
-                        'MessageSent'
-                    );
- 
-                    window.socket.on(
-                        'MessageSent',
-                        (message) => {
+                    if(
+                        window.socket
+                    ){
 
-                            console.log(
-                                '📨 REALTIME MESSAGE',
+                        window.socket.emit(
+                            'join-session',
+                            sessionId
+                        );
+                    }
+
+                }
+            );
+
+            if(
+                !window.socket
+            ){
+                return;
+            }
+
+             if (
+        this.activeSessionId
+        &&
+        window.socket
+    ) {
+
+        console.log(
+            '🚪 AUTO JOIN:',
+            this.activeSessionId
+        );
+
+        window.socket.emit(
+            'join-session',
+            this.activeSessionId
+        );
+    }
+
+            /**
+             * tránh listener trùng
+             */
+            window.socket.off(
+                'MessageSent'
+            );
+
+            window.socket.off(
+                'display-typing'
+            );
+
+            /**
+             * realtime
+             */
+            window.socket.on(
+                'MessageSent',
+                async(data)=>{
+
+                    try{
+
+                        const message=
+                        typeof data==='string'
+                        ?
+                        JSON.parse(data)
+                        :
+                        data;
+
+                        console.log(
+                            '📨 realtime:',
+                            message
+                        );
+
+                        /**
+                         * gọi PHP trực tiếp
+                         */
+                        await this.$wire
+                            .appendMessage(
                                 message
                             );
 
-                            /**
-                             * Refresh widget
-                             */
-                            Livewire.dispatch(
-                                'refresh-widget', {
-                                    message: message
-                                }
-                            );
+                        this.scrollBottom();
 
-                            scrollBottom();
-                        }
-                    );
+                    }
+                    catch(error){
 
-                    /**
-                     * =====================================
-                     * TYPING
-                     * =====================================
-                     */
-                    window.socket.off(
-                        'user-typing'
-                    );
+                        console.log(
+                            error
+                        );
 
-                    window.socket.on(
-                        'user-typing',
-                        () => {
+                    }
 
-                            this.typing = true;
-
-                            clearTimeout(
-                                this.typingTimeout
-                            );
-
-                            this.typingTimeout =
-                                setTimeout(() => {
-
-                                    this.typing = false;
-
-                                }, 1200);
-                        }
-                    );
-
-                    console.log(
-                        '✅ CHAT WIDGET READY'
-                    );
-                },
-
-                /**
-                 * SEND TYPING
-                 */
-                sendTyping() {
-
-                    window.socket.emit(
-                        'typing', {
-                            session_id: @this.activeSessionId
-                        }
-                    );
                 }
+            );
+
+            /**
+             * typing
+             */
+            window.socket.on(
+                'display-typing',
+                ()=>{
+
+                    this.isTyping=true;
+
+                    clearTimeout(
+                        this.typingTimeout
+                    );
+
+                    this.typingTimeout=
+                    setTimeout(
+                        ()=>{
+
+                            this.isTyping=
+                            false;
+
+                        },
+                        3000
+                    );
+
+                }
+            );
+
+        },
+
+        sendTyping(){
+
+            if(
+                !this.activeSessionId
+            ){
+                return;
             }
+
+            if(
+                !window.socket
+            ){
+                return;
+            }
+
+            window.socket.emit(
+                'typing',
+                {
+
+                    session_id:
+                    this.activeSessionId,
+
+                    sender_id:
+                    {{ Auth::id() ?? 0 }},
+
+                    sender_type:
+                    'guest'
+
+                }
+            );
+
+        },
+
+        scrollBottom(){
+
+            this.$nextTick(
+                ()=>{
+
+                    let el=
+                    document
+                    .getElementById(
+                        'chat-content'
+                    );
+
+                    if(
+                        !el
+                    ){
+                        return;
+                    }
+
+                    el.scrollTo({
+
+                        top:
+                        el.scrollHeight,
+
+                        behavior:
+                        'smooth'
+
+                    });
+
+                }
+            );
+
         }
-    </script>
+
+    }
+
+}
+</script>
 @endpush

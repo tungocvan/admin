@@ -1,4 +1,7 @@
-<div x-data="chatManager()" x-init="init()"
+<div
+    wire:id="{{ $this->getId() }}"
+    x-data="chatManager('{{ $this->getId() }}')"
+    x-init="init()" 
     class="h-[calc(100vh-90px)] overflow-hidden rounded-3xl border border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-800 shadow-sm">
     <div class="flex h-full">
 
@@ -321,21 +324,25 @@
 
 @push('scripts')
 <script>
-
-    function chatManager() {
+    function chatManager(componentId) {
 
         return {
 
             typingUser: false,
 
-            currentRoom: null,
-
             typingTimeout: null,
+
+            currentRoom: null,
 
             init() {
 
+                console.log(
+                    '✅ Chat initialized:',
+                    componentId
+                );
+
                 /**
-                 * Scroll listener
+                 * Scroll event từ Livewire
                  */
                 Livewire.on(
                     'scroll-bottom',
@@ -346,7 +353,7 @@
                 );
 
                 /**
-                 * Session selected
+                 * Chọn session
                  */
                 window.addEventListener(
                     'chat-session-selected',
@@ -355,7 +362,85 @@
                         const sessionId =
                             event.detail.sessionId;
 
-                        this.joinRoom(sessionId);
+                        this.joinRoom(
+                            sessionId
+                        );
+                    }
+                );
+
+                /**
+                 * SOCKET: MESSAGE RECEIVED
+                 */
+                window.socket.off(
+                    'MessageSent'
+                );
+
+                window.socket.on(
+                    'MessageSent',
+                    (data) => {
+
+                        console.log(
+                            '📨 Socket Message:',
+                            data
+                        );
+
+                        /**
+                         * gọi trực tiếp method PHP
+                         */
+                        Livewire
+                            .find(componentId)
+
+                            .call(
+                                'appendMessage',
+                                data
+                            );
+                    }
+                );
+
+                /**
+                 * CUSTOMER TYPING
+                 */
+                window.socket.off(
+                    'display-typing'
+                );
+
+                window.socket.on(
+                    'display-typing',
+                    () => {
+
+                        this.typingUser =
+                            true;
+
+                        clearTimeout(
+                            this.typingTimeout
+                        );
+
+                        this.typingTimeout =
+                            setTimeout(
+                                ()=>{
+
+                                    this.typingUser =
+                                        false;
+
+                                },
+                                2000
+                            );
+                    }
+                );
+
+                /**
+                 * CUSTOMER STOP
+                 */
+                window.socket.off(
+                    'hide-typing'
+                );
+
+                window.socket.on(
+                    'hide-typing',
+                    ()=>{
+
+                        this.typingUser =
+                            false;
                     }
                 );
             },
@@ -363,68 +448,57 @@
             /**
              * JOIN ROOM
              */
-            joinRoom(sessionId) {
+            joinRoom(
+                sessionId
+            ) {
 
-                /**
-                 * Leave old room
-                 */
-                if (this.currentRoom) {
+                if(
+                    this.currentRoom
+                ){
 
-                    window.Echo.leave(
-                        `chat.${this.currentRoom}`
+                    window.socket.emit(
+                        'leave-session',
+                        this.currentRoom
                     );
                 }
 
-                this.currentRoom = sessionId;
+                this.currentRoom =
+                    sessionId;
 
                 console.log(
-                    'Joining room:',
+                    '🚪 Join:',
                     sessionId
                 );
 
-                /**
-                 * Join room
-                 */
-                window.Echo
-                    .private(`chat.${sessionId}`)
-
-                    .listen(
-                        '.chat.message.sent',
-                        (event) => {
-
-                            console.log(
-                                '📡 Realtime message:',
-                                event
-                            );
-
-                            Livewire.dispatch(
-                                'appendMessage',
-                                {
-                                    message:
-                                        event.message
-                                }
-                            );
-                        }
-                    );
+                window.socket.emit(
+                    'join-session',
+                    sessionId
+                );
             },
 
             /**
-             * TYPING
+             * ADMIN TYPING
              */
             typing() {
 
-                this.typingUser = true;
+                if(
+                    !@this.activeSessionId
+                ){
+                    return;
+                }
 
-                clearTimeout(
-                    this.typingTimeout
+                window.socket.emit(
+                    'typing',
+                    {
+
+                        session_id:
+                            @this.activeSessionId,
+
+                        sender_id:
+                            {{ Auth::id() }}
+
+                    }
                 );
-
-                this.typingTimeout =
-                    setTimeout(() => {
-
-                        this.typingUser = false;
-
-                    }, 1000);
             },
 
             /**
@@ -432,21 +506,34 @@
              */
             scrollBottom() {
 
-                this.$nextTick(() => {
+                this.$nextTick(
+                    ()=>{
 
-                    const el =
-                        document.getElementById(
-                            'chat-window'
-                        );
+                        const el=
+                            document.getElementById(
+                                'chat-window'
+                            );
 
-                    if (!el) {
-                        return;
+                        if(
+                            !el
+                        ){
+                            return;
+                        }
+
+                        el.scrollTo({
+
+                            top:
+                                el.scrollHeight,
+
+                            behavior:
+                                'smooth'
+
+                        });
+
                     }
-
-                    el.scrollTop =
-                        el.scrollHeight;
-                });
+                );
             }
+
         }
     }
 </script>

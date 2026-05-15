@@ -3,248 +3,126 @@
 namespace Modules\Chat\Livewire\Chat;
 
 use Livewire\Component;
-use Modules\Chat\Models\ChatSession;
-use Modules\Chat\Models\ChatMessage;
+use Modules\Admin\Models\ChatSession;
+use Modules\Admin\Models\ChatMessage;
 use Modules\Chat\Services\ChatService;
 use Illuminate\Support\Facades\Auth;
 
 class ChatManager extends Component
 {
     public ?int $activeSessionId = null;
-
     public string $message = '';
-
     public array $messages = [];
 
+    // Lắng nghe sự kiện từ NodeJS gửi về thông qua trình duyệt
     protected $listeners = [
-        'appendMessage',
+        'echo-refresh' => '$refresh',
+        'appendMessage' => 'appendMessage',
     ];
 
-    /**
-     * =========================================
-     * SELECT SESSION
-     * =========================================
-     */
-    public function selectSession(
-        int $sessionId
-    ): void {
-
+    public function selectSession(int $sessionId): void
+    {
         $this->activeSessionId = $sessionId;
-
         $session = ChatSession::find($sessionId);
 
-        if (!$session) {
-            return;
+        if (!$session) return;
+
+        // Gán admin quản lý session nếu chưa có ai
+        if (!$session->admin_id) {
+            $session->update(['admin_id' => Auth::id()]);
         }
 
-        /**
-         * Claim admin
-         */
-        ChatSession::query()
-            ->where('id', $sessionId)
-            ->whereNull('admin_id')
-            ->update([
-                'admin_id' => Auth::id(),
-            ]);
+        // Load 50 tin nhắn mới nhất
+        $this->loadMessages();
 
-        /**
-         * Load messages
-         */
+        // Dispatch sự kiện để AlpineJS Join Room bên Socket.io
+        $this->dispatch('chat-session-selected', sessionId: $sessionId);
+    }
+
+    public function loadMessages()
+    {
+        if (!$this->activeSessionId) return;
+
         $this->messages = ChatMessage::query()
-            ->where(
-                'chat_session_id',
-                $sessionId
-            )
-            ->latest()
-            ->limit(50)
+            ->where('chat_session_id', $this->activeSessionId)
+            ->oldest() // Lấy từ cũ đến mới để hiển thị đúng thứ tự
+            ->limit(100)
             ->get()
-            ->reverse()
-            ->values()
             ->toArray();
 
-        /**
-         * Join realtime room
-         */
-        $this->dispatch(
-            'chat-session-selected',
-            sessionId: $sessionId
-        );
-
-        /**
-         * Scroll
-         */
         $this->dispatch('scroll-bottom');
     }
 
-    /**
-     * =========================================
-     * SEND MESSAGE
-     * =========================================
-     */
-    public function send(
-        ChatService $chatService
-    ): void {
+    public function send(ChatService $chatService): void
+    {
+        if (!$this->activeSessionId) return;
 
-        /**
-         * No active session
-         */
-        if (!$this->activeSessionId) {
-            return;
-        }
+        $messageText = trim($this->message);
+        if (!$messageText) return;
 
-        /**
-         * Clean message
-         */
-        $message = trim($this->message);
-
-        /**
-         * Empty message
-         */
-        if (!$message) {
-            return;
-        }
-
-        /**
-         * Save message
-         */
-        $chat = $chatService->sendMessage([
-
+        $chatService->sendMessage([
             'chat_session_id' => $this->activeSessionId,
-
-            'sender_id' => Auth::id(),
-
-            'sender_type' => 'admin',
-
-            'message' => $message,
-
+            'sender_id'       => Auth::id(),
+            'sender_type'     => 'admin',
+            'message'         => $messageText,
         ]);
 
-        /**
-         * IMPORTANT:
-         * Do NOT append local message
-         *
-         * Realtime event will append automatically
-         * via Echo -> appendMessage()
-         */
-
-        /**
-         * Reset input
-         */
         $this->reset('message');
-
-        /**
-         * Scroll bottom
-         */
-        $this->dispatch(
-            'scroll-bottom'
-        );
+        // Không cần append local vì ta sẽ lắng nghe event từ Node trả về
     }
 
-    /**
-     * =========================================
-     * REALTIME APPEND
-     * =========================================
-     */
-    public function appendMessage(
-        $message
-    ): void {
+    // public function appendMessage($message): void 
+    // {
+    //     // Chống trùng lặp tin nhắn
+    //     $exists = collect($this->messages)->contains('id', $message['id']);
+    //     if ($exists) return;
 
+    //     if ($message['chat_session_id'] == $this->activeSessionId) {
+    //         $this->messages[] = $message;
+    //         $this->dispatch('scroll-bottom');
+    //     }
+    // }
+
+
+
+    public function appendMessage($message): void
+    {
+        // Chuyển đổi nếu message là JSON string
         if (is_string($message)) {
-
-            $message = json_decode(
-                $message,
-                true
-            );
+            $message = json_decode($message, true);
         }
 
-        if (!is_array($message)) {
+        // Kiểm tra xem tin nhắn có thuộc session đang mở không
+        if ((int)$message['chat_session_id'] !== $this->activeSessionId) {
             return;
         }
 
-        /**
-         * Wrong room
-         */
-        if (
-            (int) $message['chat_session_id']
-            !==
-            $this->activeSessionId
-        ) {
-            return;
-        }
+        // Chống trùng (Duplicate prevention)
+        $exists = collect($this->messages)->contains('id', $message['id']);
+        if ($exists) return;
 
-        /**
-         * Duplicate prevent
-         */
-        $exists = collect($this->messages)
-            ->contains(
-                fn($msg)
-                =>
-                $msg['id']
-                    ==
-                    $message['id']
-            );
-
-        if ($exists) {
-            return;
-        }
-
-        /**
-         * Append realtime
-         */
+        // Đẩy vào mảng và Livewire sẽ tự động render lại HTML
         $this->messages[] = $message;
 
-        /**
-         * Scroll
-         */
+        // Cuộn xuống cuối
         $this->dispatch('scroll-bottom');
     }
 
-    /**
-     * =========================================
-     * COMPUTED SESSIONS
-     * =========================================
-     */
     public function getSessionsProperty()
     {
         return ChatSession::query()
-
-            ->with([
-                'user',
-                'latestMessage',
-            ])
-
+            ->with(['user', 'latestMessage'])
             ->latest('last_message_at')
-
-            ->limit(30)
-
             ->get();
     }
 
-    /**
-     * =========================================
-     * ACTIVE SESSION
-     * =========================================
-     */
     public function getActiveSessionProperty()
     {
-        if (!$this->activeSessionId) {
-            return null;
-        }
-
-        return ChatSession::find(
-            $this->activeSessionId
-        );
+        return $this->activeSessionId ? ChatSession::find($this->activeSessionId) : null;
     }
 
-    /**
-     * =========================================
-     * RENDER
-     * =========================================
-     */
     public function render()
     {
-        return view(
-            'Chat::livewire.chat.chat-manager'
-        );
+        return view('Chat::livewire.chat.chat-manager');
     }
 }
