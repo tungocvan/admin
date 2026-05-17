@@ -1,4 +1,4 @@
-<div x-data="chatWidget()" x-init="init()" class="fixed bottom-6 right-6 z-[9999]">
+<div wire:ignore.self x-data="chatWidget()" x-init="init()" class="fixed bottom-6 right-6 z-[9999]">
 
     {{-- TOGGLE --}}
     <button @click="isChatOpen = !isChatOpen"
@@ -211,248 +211,154 @@
 
 @push('scripts')
     <script>
-function chatWidget() {
+        document.addEventListener('alpine:init', () => {
 
-    return {
+            Alpine.data('chatWidget', () => ({
 
-        isChatOpen:false,
+                initialized: false,
 
-        isTyping:false,
+                isChatOpen: false,
+                isTyping: false,
 
-        typingTimeout:null,
+                activeSessionId: null,
 
-        activeSessionId:@entangle(
-            'activeSessionId'
-        ),
+                init() {
 
-        initialized:false,
+                    if (this.initialized) return;
 
-        init(){
+                    this.initialized = true;
 
-            if(
-                this.initialized
-            ){
-                return;
-            }
+                    console.log('✅ chat init');
 
-            this.initialized=true;
-
-            console.log(
-                '✅ chat init'
-            );
-
-            /**
-             * scroll
-             */
-            Livewire.on(
-                'scroll-bottom',
-                ()=>{
-
-                    this.scrollBottom();
-                }
-            );
-
-            /**
-             * join room
-             */
-            window.addEventListener(
-                'chat-session-selected',
-                (event)=>{
-
-                    let sessionId=
-                        event.detail
-                        .sessionId;
-
-                    console.log(
-                        '🚪 join',
-                        sessionId
-                    );
-
-                    if(
-                        window.socket
-                    ){
-
-                        window.socket.emit(
-                            'join-session',
-                            sessionId
-                        );
-                    }
-
-                }
-            );
-
-            if(
-                !window.socket
-            ){
-                return;
-            }
-
-             if (
-        this.activeSessionId
-        &&
-        window.socket
-    ) {
-
-        console.log(
-            '🚪 AUTO JOIN:',
-            this.activeSessionId
-        );
-
-        window.socket.emit(
-            'join-session',
-            this.activeSessionId
-        );
-    }
-
-            /**
-             * tránh listener trùng
-             */
-            window.socket.off(
-                'MessageSent'
-            );
-
-            window.socket.off(
-                'display-typing'
-            );
-
-            /**
-             * realtime
-             */
-            window.socket.on(
-                'MessageSent',
-                async(data)=>{
-
-                    try{
-
-                        const message=
-                        typeof data==='string'
-                        ?
-                        JSON.parse(data)
-                        :
-                        data;
+                    this.$nextTick(() => {
 
                         console.log(
-                            '📨 realtime:',
-                            message
+                            'WIRE:',
+                            this.$wire
                         );
 
-                        /**
-                         * gọi PHP trực tiếp
-                         */
-                        await this.$wire
-                            .appendMessage(
-                                message
-                            );
-
-                        this.scrollBottom();
-
-                    }
-                    catch(error){
+                        this.activeSessionId =
+                            this.$wire.activeSessionId;
 
                         console.log(
-                            error
+                            'ROOM:',
+                            this.activeSessionId
                         );
 
-                    }
-
-                }
-            );
-
-            /**
-             * typing
-             */
-            window.socket.on(
-                'display-typing',
-                ()=>{
-
-                    this.isTyping=true;
-
-                    clearTimeout(
-                        this.typingTimeout
-                    );
-
-                    this.typingTimeout=
-                    setTimeout(
-                        ()=>{
-
-                            this.isTyping=
-                            false;
-
-                        },
-                        3000
-                    );
-
-                }
-            );
-
-        },
-
-        sendTyping(){
-
-            if(
-                !this.activeSessionId
-            ){
-                return;
-            }
-
-            if(
-                !window.socket
-            ){
-                return;
-            }
-
-            window.socket.emit(
-                'typing',
-                {
-
-                    session_id:
-                    this.activeSessionId,
-
-                    sender_id:
-                    {{ Auth::id() ?? 0 }},
-
-                    sender_type:
-                    'guest'
-
-                }
-            );
-
-        },
-
-        scrollBottom(){
-
-            this.$nextTick(
-                ()=>{
-
-                    let el=
-                    document
-                    .getElementById(
-                        'chat-content'
-                    );
-
-                    if(
-                        !el
-                    ){
-                        return;
-                    }
-
-                    el.scrollTo({
-
-                        top:
-                        el.scrollHeight,
-
-                        behavior:
-                        'smooth'
+                        this.bindSocket();
 
                     });
 
+                },
+
+                bindSocket() {
+
+                    if (!window.socket) {
+
+                        console.log(
+                            '❌ socket null'
+                        );
+
+                        return;
+                    }
+
+                    window.socket.off(
+                        'connect'
+                    );
+
+                    window.socket.on(
+                        'connect',
+                        () => {
+
+                            console.log(
+                                '🟢 SOCKET:',
+                                window.socket.id
+                            );
+
+                            if (
+                                this.activeSessionId
+                            ) {
+
+                                console.log(
+                                    '🚪 JOIN:',
+                                    this.activeSessionId
+                                );
+
+                                window.socket.emit(
+                                    'join-session',
+                                    this.activeSessionId
+                                );
+
+                            }
+
+                        }
+                    );
+
+
+                    window.addEventListener(
+                        'chat-session-selected',
+                        (e) => {
+
+                            this.activeSessionId =
+                                e.detail.sessionId;
+
+                            console.log(
+                                '🆕 SESSION:',
+                                this.activeSessionId
+                            );
+
+                            window.socket.emit(
+                                'join-session',
+                                this.activeSessionId
+                            );
+
+                        }
+                    );
+
+
+                    window.socket.off(
+                        'MessageSent'
+                    );
+
+                    console.log(
+                        '🔥 bind MessageSent'
+                    );
+
+                    window.socket.on(
+                        'MessageSent',
+                        data => {
+
+                            console.log(
+                                '📨 RECEIVE:',
+                                data
+                            );
+
+                            this.$wire.call(
+                                'appendMessage',
+                                data
+                            );
+
+                        }
+                    );
+
+                },
+
+                sendTyping() {
+
+                    if (
+                        !this.activeSessionId
+                    ) return;
+
+                    window.socket.emit(
+                        'typing', {
+                            session_id: this.activeSessionId
+                        }
+                    );
+
                 }
-            );
 
-        }
+            }));
 
-    }
-
-}
-</script>
+        });
+    </script>
 @endpush
